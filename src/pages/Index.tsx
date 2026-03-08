@@ -144,7 +144,8 @@ When the user ASKS FOR NEW OUTFITS or this is the first request, return your res
   {
     "id": "unique-id",
     "name": "Outfit Name",
-    "explanation": "Why this outfit works for the occasion",
+    "explanation": "2-3 sentences explaining WHY this outfit works for the occasion — color harmony, silhouette balance, vibe match, etc.",
+    "stylingTips": ["Actionable styling tip 1", "Actionable styling tip 2", "Actionable styling tip 3"],
     "occasion": "${occ}",
     "items": [
       {
