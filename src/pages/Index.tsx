@@ -273,9 +273,9 @@ Rules:
               transition={{ duration: 0.8 }}
               className="text-center max-w-2xl w-full"
             >
-              <h1 className="font-serif text-5xl sm:text-7xl font-bold tracking-[0.15em] text-foreground mb-4">
+              <h1 className="text-5xl sm:text-7xl font-light tracking-[0.25em] text-foreground mb-4 uppercase" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
                 STYLE
-                <span className="block text-accent">CAPSULE</span>
+                <span className="block text-accent font-normal">CAPSULE</span>
               </h1>
               <p className="text-muted-foreground text-lg font-sans mb-8 max-w-md mx-auto leading-relaxed">
                 Your AI-powered personal stylist. Tell us the occasion, and we'll curate the perfect capsule wardrobe for you.
