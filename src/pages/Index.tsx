@@ -334,6 +334,7 @@ Rules:
                       options={FOLLOW_UP_OPTIONS}
                       onSelect={handlePrefSelect}
                       selectedValues={selectedPrefs}
+                      currencySelector={<CurrencySelector value={currency} onChange={setCurrency} />}
                     />
 
                     <div className="mt-6 flex justify-center">
