@@ -443,7 +443,7 @@ Rules:
                         </div>
                       )}
                       {entry.outfits && entry.outfits.length > 0 && (
-                        <div className="space-y-6 mt-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
                           {entry.outfits.map((outfit, i) => (
                             <OutfitCard
                               key={outfit.id}
