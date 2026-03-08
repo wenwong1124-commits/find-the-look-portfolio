@@ -178,6 +178,7 @@ Rules:
 - Mix brands across outfits for variety
 - Adapt to the season, occasion, and style preferences
 - Keep explanations concise and inspiring
+- Each outfit MUST have an "explanation" (why it works) and "stylingTips" (3 actionable tips like "Tuck the shirt in for a polished look" or "Roll the sleeves for a relaxed vibe")
 - ALL prices must be in ${currency} (${currencySymbol})
 - After showing outfits, ask if they're happy or want changes (e.g. "Want me to make it more casual?" or "Should I try different brands?")`;
 
