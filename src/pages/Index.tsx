@@ -126,8 +126,8 @@ export default function Index() {
     setIsLoading(true);
 
     const systemPrompt = `You are StyleCapsule, an expert AI fashion stylist. The user wants outfit recommendations.
-    
-IMPORTANT: Return your response in TWO parts:
+
+When the user ASKS FOR NEW OUTFITS or this is the first request, return your response in TWO parts:
 1. A brief, warm introduction (2-3 sentences) about why these outfits work for their occasion.
 2. A JSON block with the outfit data in this EXACT format:
 
@@ -156,20 +156,30 @@ IMPORTANT: Return your response in TWO parts:
 ]
 \`\`\`
 
+When the user asks follow-up questions, feedback, or wants to refine:
+- If they want different outfits or modifications, generate new outfit JSON blocks
+- If they ask general styling questions, answer conversationally without JSON
+- Always end your response by asking if they'd like to adjust anything or try different styles
+
 Rules:
-- Generate exactly 3 capsule outfit sets
+- Generate exactly 3 capsule outfit sets when providing outfits
 - Each outfit must have at least: top, bottom, shoes, bag, and 1 accessory
 - Use REAL fashion brands and realistic prices matching the user's budget in ${currency}
 - shopUrl should link to the actual brand's website (e.g., https://www.zara.com, https://www.cos.com)
 - Mix brands across outfits for variety
 - Adapt to the season, occasion, and style preferences
 - Keep explanations concise and inspiring
-- ALL prices must be in ${currency} (${currencySymbol})`;
+- ALL prices must be in ${currency} (${currencySymbol})
+- After showing outfits, ask if they're happy or want changes (e.g. "Want me to make it more casual?" or "Should I try different brands?")`;
 
     const messages: Msg[] = [
       { role: "system", content: systemPrompt },
+      ...conversationHistory,
       { role: "user", content: fullPrompt },
     ];
+
+    // Update conversation history
+    setConversationHistory((prev) => [...prev, { role: "user", content: fullPrompt }]);
 
     let assistantText = "";
 
@@ -178,7 +188,6 @@ Rules:
         messages,
         onDelta: (chunk) => {
           assistantText += chunk;
-          // Strip JSON code blocks and any partial ```json block from displayed text
           const displayText = assistantText
             .replace(/```json[\s\S]*?```/g, "")
             .replace(/```json[\s\S]*$/g, "")
@@ -209,6 +218,9 @@ Rules:
               return newEntries;
             });
           }
+          // Save assistant response to conversation history
+          setConversationHistory((prev) => [...prev, { role: "assistant", content: assistantText }]);
+          setOutfitsGenerated(true);
           setIsLoading(false);
         },
       });
@@ -217,6 +229,17 @@ Rules:
       setIsLoading(false);
     }
   };
+
+  const handleChatFollowUp = async (text: string) => {
+    if (!text.trim() || isLoading) return;
+    setInput("");
+
+    setChatEntries((prev) => [
+      ...prev,
+      { id: crypto.randomUUID(), role: "user", content: text.trim() },
+    ]);
+
+    handleGenerateOutfits(initialOccasion, selectedPrefs, text.trim());
 
   const handleFollowUpSubmit = () => {
     handleGenerateOutfits();
