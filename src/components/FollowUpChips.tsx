@@ -8,7 +8,7 @@ interface FollowUpChipsProps {
   currencySelector?: React.ReactNode;
 }
 
-export function FollowUpChips({ options, onSelect, selectedValues }: FollowUpChipsProps) {
+export function FollowUpChips({ options, onSelect, selectedValues, currencySelector }: FollowUpChipsProps) {
   const [customInputs, setCustomInputs] = useState<Record<string, string>>({});
 
   const handleOtherInput = (category: string, value: string) => {
