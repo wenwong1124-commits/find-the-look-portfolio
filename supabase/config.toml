@@ -2,3 +2,6 @@ project_id = "yjpudwxooblpzmxdrdqo"
 
 [functions.style-advisor]
 verify_jwt = false
+
+[functions.generate-item-image]
+verify_jwt = false
