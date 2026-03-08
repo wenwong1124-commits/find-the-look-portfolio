@@ -5,9 +5,10 @@ interface FollowUpChipsProps {
   options: { label: string; category: string; options: string[] }[];
   onSelect: (category: string, value: string) => void;
   selectedValues: Record<string, string>;
+  currencySelector?: React.ReactNode;
 }
 
-export function FollowUpChips({ options, onSelect, selectedValues }: FollowUpChipsProps) {
+export function FollowUpChips({ options, onSelect, selectedValues, currencySelector }: FollowUpChipsProps) {
   const [customInputs, setCustomInputs] = useState<Record<string, string>>({});
 
   const handleOtherInput = (category: string, value: string) => {
@@ -30,7 +31,10 @@ export function FollowUpChips({ options, onSelect, selectedValues }: FollowUpChi
 
         return (
           <div key={gi}>
-            <p className="text-sm font-medium text-foreground mb-2 font-sans">{group.label}</p>
+            <div className="flex items-center gap-2 mb-2">
+              <p className="text-sm font-medium text-foreground font-sans">{group.label}</p>
+              {group.category === "budget" && currencySelector}
+            </div>
             <div className="flex flex-wrap gap-2 items-center">
               {group.options.map((opt) => (
                 <button
