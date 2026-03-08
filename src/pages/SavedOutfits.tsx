@@ -12,7 +12,7 @@ export default function SavedOutfits() {
     <div className="min-h-screen bg-background">
       <Navbar savedCount={savedOutfits.length} />
 
-      <div className="pt-20 pb-12 px-4 max-w-3xl mx-auto">
+      <div className="pt-20 pb-12 px-4 max-w-6xl mx-auto">
         <div className="mb-8">
           <h1 className="font-serif text-3xl font-bold text-foreground">Saved Outfits</h1>
           <p className="text-muted-foreground font-sans mt-1">
@@ -36,7 +36,7 @@ export default function SavedOutfits() {
             </Link>
           </motion.div>
         ) : (
-          <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {savedOutfits.map((saved, i) => (
               <OutfitCard
                 key={saved.id}

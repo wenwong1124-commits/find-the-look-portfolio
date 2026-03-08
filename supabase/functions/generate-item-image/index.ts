@@ -14,9 +14,10 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const imagePrompt = `Generate a clean, minimal product photo of: ${prompt}. 
-The item should be shown on a plain white/light gray background, flat-lay style, no mannequin, no person wearing it. 
-Professional e-commerce product photography style. Clean, simple, editorial.`;
+    const imagePrompt = `Generate a product cutout image of: ${prompt}. 
+Isolated item on a pure white background, no shadows, no mannequin, no person. 
+The item should look like a transparent PNG cutout — clean edges, flat-lay product photo style. 
+Professional e-commerce photography, centered composition.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

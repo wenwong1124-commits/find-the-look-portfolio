@@ -144,7 +144,8 @@ When the user ASKS FOR NEW OUTFITS or this is the first request, return your res
   {
     "id": "unique-id",
     "name": "Outfit Name",
-    "explanation": "Why this outfit works for the occasion",
+    "explanation": "2-3 sentences explaining WHY this outfit works for the occasion — color harmony, silhouette balance, vibe match, etc.",
+    "stylingTips": ["Actionable styling tip 1", "Actionable styling tip 2", "Actionable styling tip 3"],
     "occasion": "${occ}",
     "items": [
       {
@@ -177,6 +178,7 @@ Rules:
 - Mix brands across outfits for variety
 - Adapt to the season, occasion, and style preferences
 - Keep explanations concise and inspiring
+- Each outfit MUST have an "explanation" (why it works) and "stylingTips" (3 actionable tips like "Tuck the shirt in for a polished look" or "Roll the sleeves for a relaxed vibe")
 - ALL prices must be in ${currency} (${currencySymbol})
 - After showing outfits, ask if they're happy or want changes (e.g. "Want me to make it more casual?" or "Should I try different brands?")`;
 
@@ -399,7 +401,7 @@ Rules:
             key="chat"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="pt-20 pb-24 px-4 max-w-3xl mx-auto"
+            className="pt-20 pb-24 px-4 max-w-6xl mx-auto"
           >
             <div className="space-y-6">
               {chatEntries.map((entry) => (
@@ -441,7 +443,7 @@ Rules:
                         </div>
                       )}
                       {entry.outfits && entry.outfits.length > 0 && (
-                        <div className="space-y-6 mt-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
                           {entry.outfits.map((outfit, i) => (
                             <OutfitCard
                               key={outfit.id}

@@ -15,6 +15,7 @@ export interface CapsuleOutfit {
   id: string;
   name: string;
   explanation: string;
+  stylingTips?: string[];
   items: OutfitItem[];
   occasion: string;
 }
