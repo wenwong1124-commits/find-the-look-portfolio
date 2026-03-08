@@ -120,7 +120,11 @@ export default function Index() {
           return `Occasion: ${occ}. ${prefsText ? `Preferences: ${prefsText}.` : ""} Please generate 3 capsule outfit sets. Use ${currency} (${currencySymbol}) for all prices.`;
         })();
 
-    if (!occasion) {
+    if (!followUpText && !occasion) {
+      const prefsText = Object.entries(p)
+        .filter(([k]) => k !== "occasion_text")
+        .map(([k, v]) => `${k}: ${v}`)
+        .join(", ");
       setChatEntries((prev) => [
         ...prev,
         { id: crypto.randomUUID(), role: "user", content: prefsText ? `My preferences: ${prefsText}` : "Generate outfits for me!" },
