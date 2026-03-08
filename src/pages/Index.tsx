@@ -118,7 +118,7 @@ export default function Index() {
             .filter(([k]) => k !== "occasion_text")
             .map(([k, v]) => `${k}: ${v}`)
             .join(", ");
-          return `Occasion: ${occ}. ${prefsText ? `Preferences: ${prefsText}.` : ""} Please generate 3 capsule outfit sets. Use ${currency} (${currencySymbol}) for all prices.`;
+          return `Occasion: ${occ}. Gender: ${gender}. ${prefsText ? `Preferences: ${prefsText}.` : ""} Please generate 3 capsule outfit sets. Use ${currency} (${currencySymbol}) for all prices.`;
         })();
 
     if (!followUpText && !occasion) {
