@@ -5,6 +5,7 @@ import { Navbar } from "@/components/Navbar";
 import { OutfitCard } from "@/components/OutfitCard";
 import { FollowUpChips } from "@/components/FollowUpChips";
 import { ThinkingIndicator } from "@/components/ThinkingIndicator";
+import { CurrencySelector, getCurrencySymbol } from "@/components/CurrencySelector";
 import { useSavedOutfits } from "@/hooks/useSavedOutfits";
 import { streamChat, Msg } from "@/lib/streamChat";
 import { parseOutfitsFromText, hasOutfitData } from "@/lib/parseOutfits";
@@ -21,7 +22,7 @@ const EXAMPLE_PROMPTS = [
 ];
 
 const FOLLOW_UP_OPTIONS: FollowUpOption[] = [
-  { label: "What's your budget range?", category: "budget", options: ["Under $100", "$100–$300", "$300–$600", "$600+"] },
+  { label: "What's your budget range?", category: "budget", options: ["Under $500", "$500–$1,500", "$1,500–$3,000", "$3,000+"] },
   { label: "How many days?", category: "days", options: ["1 day", "2–3 days", "4–5 days", "A week+"] },
   { label: "What season or month?", category: "season", options: ["Spring", "Summer", "Autumn", "Winter"] },
   { label: "What style do you prefer?", category: "style", options: ["Casual", "Smart Casual", "Formal", "Edgy", "Classic", "Streetwear"] },
@@ -36,6 +37,8 @@ interface ChatEntry {
   showFollowUp?: boolean;
 }
 
+type InputMode = "occasion" | "filters";
+
 export default function Index() {
   const [input, setInput] = useState("");
   const [chatEntries, setChatEntries] = useState<ChatEntry[]>([]);
@@ -44,6 +47,8 @@ export default function Index() {
   const [selectedPrefs, setSelectedPrefs] = useState<Record<string, string>>({});
   const [showFollowUp, setShowFollowUp] = useState(false);
   const [initialOccasion, setInitialOccasion] = useState("");
+  const [currency, setCurrency] = useState("HKD");
+  const [inputMode, setInputMode] = useState<InputMode>("occasion");
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { savedOutfits, saveOutfit, removeOutfit, isOutfitSaved } = useSavedOutfits();
@@ -60,7 +65,6 @@ export default function Index() {
     setInput("");
     setShowFollowUp(true);
 
-    // Add assistant follow-up message
     setTimeout(() => {
       setChatEntries((prev) => [
         ...prev,
@@ -74,23 +78,47 @@ export default function Index() {
     }, 500);
   };
 
+  const handleFilterSubmit = () => {
+    const occasion = selectedPrefs["occasion_text"] || "General occasion";
+    setHasStarted(true);
+    setInitialOccasion(occasion);
+
+    const prefsText = Object.entries(selectedPrefs)
+      .filter(([k]) => k !== "occasion_text")
+      .map(([k, v]) => `${k}: ${v}`)
+      .join(", ");
+
+    setChatEntries([
+      { id: crypto.randomUUID(), role: "user", content: prefsText ? `My preferences: ${prefsText}` : "Generate outfits for me!" },
+    ]);
+
+    setShowFollowUp(false);
+    handleGenerateOutfits(occasion, selectedPrefs);
+  };
+
   const handlePrefSelect = (category: string, value: string) => {
     setSelectedPrefs((prev) => ({ ...prev, [category]: value }));
   };
 
-  const handleGenerateOutfits = async () => {
+  const handleGenerateOutfits = async (occasion?: string, prefs?: Record<string, string>) => {
     setShowFollowUp(false);
 
-    // Build the full prompt
-    const prefsText = Object.entries(selectedPrefs)
+    const occ = occasion || initialOccasion;
+    const p = prefs || selectedPrefs;
+    const currencySymbol = getCurrencySymbol(currency);
+
+    const prefsText = Object.entries(p)
+      .filter(([k]) => k !== "occasion_text")
       .map(([k, v]) => `${k}: ${v}`)
       .join(", ");
-    const fullPrompt = `Occasion: ${initialOccasion}. ${prefsText ? `Preferences: ${prefsText}.` : ""} Please generate 3 capsule outfit sets.`;
+    const fullPrompt = `Occasion: ${occ}. ${prefsText ? `Preferences: ${prefsText}.` : ""} Please generate 3 capsule outfit sets. Use ${currency} (${currencySymbol}) for all prices.`;
 
-    setChatEntries((prev) => [
-      ...prev,
-      { id: crypto.randomUUID(), role: "user", content: prefsText ? `My preferences: ${prefsText}` : "Generate outfits for me!" },
-    ]);
+    if (!occasion) {
+      setChatEntries((prev) => [
+        ...prev,
+        { id: crypto.randomUUID(), role: "user", content: prefsText ? `My preferences: ${prefsText}` : "Generate outfits for me!" },
+      ]);
+    }
 
     setIsLoading(true);
 
@@ -106,13 +134,13 @@ IMPORTANT: Return your response in TWO parts:
     "id": "unique-id",
     "name": "Outfit Name",
     "explanation": "Why this outfit works for the occasion",
-    "occasion": "${initialOccasion}",
+    "occasion": "${occ}",
     "items": [
       {
         "name": "Item Name",
         "brand": "Brand Name",
         "price": 89,
-        "currency": "$",
+        "currency": "${currencySymbol}",
         "color": "Color",
         "material": "Material",
         "category": "top|bottom|shoes|bag|accessory|outerwear|dress",
@@ -128,11 +156,12 @@ IMPORTANT: Return your response in TWO parts:
 Rules:
 - Generate exactly 3 capsule outfit sets
 - Each outfit must have at least: top, bottom, shoes, bag, and 1 accessory
-- Use REAL fashion brands and realistic prices matching the user's budget
+- Use REAL fashion brands and realistic prices matching the user's budget in ${currency}
 - shopUrl should link to the actual brand's website (e.g., https://www.zara.com, https://www.cos.com)
 - Mix brands across outfits for variety
 - Adapt to the season, occasion, and style preferences
-- Keep explanations concise and inspiring`;
+- Keep explanations concise and inspiring
+- ALL prices must be in ${currency} (${currencySymbol})`;
 
     const messages: Msg[] = [
       { role: "system", content: systemPrompt },
@@ -157,7 +186,6 @@ Rules:
           });
         },
         onDone: () => {
-          // Parse outfits from the completed text
           const outfits = parseOutfitsFromText(assistantText);
           if (outfits.length > 0) {
             setChatEntries((prev) => {
@@ -167,7 +195,6 @@ Rules:
                 if (newEntries[i].role === "assistant" && !newEntries[i].showFollowUp) { lastAssistant = i; break; }
               }
               if (lastAssistant >= 0) {
-                // Remove the JSON block from displayed text
                 const cleanText = assistantText.replace(/```json[\s\S]*?```/, "").trim();
                 newEntries[lastAssistant] = { ...newEntries[lastAssistant], content: cleanText, outfits };
               }
@@ -204,48 +231,131 @@ Rules:
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8 }}
-              className="text-center max-w-2xl"
+              className="text-center max-w-2xl w-full"
             >
               <h1 className="font-serif text-5xl sm:text-7xl font-bold tracking-[0.15em] text-foreground mb-4">
                 STYLE
                 <span className="block text-accent">CAPSULE</span>
               </h1>
-              <p className="text-muted-foreground text-lg font-sans mb-12 max-w-md mx-auto leading-relaxed">
+              <p className="text-muted-foreground text-lg font-sans mb-8 max-w-md mx-auto leading-relaxed">
                 Your AI-powered personal stylist. Tell us the occasion, and we'll curate the perfect capsule wardrobe for you.
               </p>
 
-              {/* Main Input */}
-              <div className="relative max-w-lg mx-auto mb-8">
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleInitialSubmit(input)}
-                  placeholder="What's the occasion?"
-                  className="w-full px-6 py-4 pr-14 rounded-full border border-border bg-card text-foreground placeholder:text-muted-foreground text-base font-sans focus:outline-none focus:ring-2 focus:ring-foreground/20 transition-all"
-                />
-                <button
-                  onClick={() => handleInitialSubmit(input)}
-                  disabled={!input.trim()}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-foreground text-background hover:bg-foreground/80 transition-colors disabled:opacity-30"
-                >
-                  <ArrowRight className="w-4 h-4" />
-                </button>
+              {/* Currency selector */}
+              <div className="flex justify-center mb-6">
+                <CurrencySelector value={currency} onChange={setCurrency} />
               </div>
 
-              {/* Example chips */}
-              <div className="flex flex-wrap justify-center gap-2">
-                {EXAMPLE_PROMPTS.map((prompt) => (
+              {/* Mode toggle */}
+              <div className="flex justify-center mb-8">
+                <div className="inline-flex rounded-full border border-border bg-card p-1">
                   <button
-                    key={prompt}
-                    onClick={() => handleInitialSubmit(prompt)}
-                    className="text-sm px-4 py-2 rounded-full border border-border text-muted-foreground hover:text-foreground hover:bg-secondary transition-all font-sans"
+                    onClick={() => setInputMode("occasion")}
+                    className={`text-sm px-5 py-2 rounded-full font-sans transition-all ${
+                      inputMode === "occasion"
+                        ? "bg-foreground text-background"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
                   >
-                    {prompt}
+                    By Occasion
                   </button>
-                ))}
+                  <button
+                    onClick={() => setInputMode("filters")}
+                    className={`text-sm px-5 py-2 rounded-full font-sans transition-all ${
+                      inputMode === "filters"
+                        ? "bg-foreground text-background"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    By Filters
+                  </button>
+                </div>
               </div>
+
+              <AnimatePresence mode="wait">
+                {inputMode === "occasion" ? (
+                  <motion.div
+                    key="occasion-mode"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {/* Main Input */}
+                    <div className="relative max-w-lg mx-auto mb-8">
+                      <input
+                        ref={inputRef}
+                        type="text"
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleInitialSubmit(input)}
+                        placeholder="What's the occasion?"
+                        className="w-full px-6 py-4 pr-14 rounded-full border border-border bg-card text-foreground placeholder:text-muted-foreground text-base font-sans focus:outline-none focus:ring-2 focus:ring-foreground/20 transition-all"
+                      />
+                      <button
+                        onClick={() => handleInitialSubmit(input)}
+                        disabled={!input.trim()}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-foreground text-background hover:bg-foreground/80 transition-colors disabled:opacity-30"
+                      >
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* Example chips */}
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {EXAMPLE_PROMPTS.map((prompt) => (
+                        <button
+                          key={prompt}
+                          onClick={() => handleInitialSubmit(prompt)}
+                          className="text-sm px-4 py-2 rounded-full border border-border text-muted-foreground hover:text-foreground hover:bg-secondary transition-all font-sans"
+                        >
+                          {prompt}
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="filter-mode"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                    className="max-w-lg mx-auto text-left"
+                  >
+                    {/* Optional occasion text */}
+                    <div className="mb-4">
+                      <p className="text-sm font-medium text-foreground mb-2 font-sans">Occasion (optional)</p>
+                      <input
+                        type="text"
+                        value={selectedPrefs["occasion_text"] || ""}
+                        onChange={(e) => handlePrefSelect("occasion_text", e.target.value)}
+                        placeholder="e.g. Beach holiday, office party..."
+                        className="w-full px-4 py-3 rounded-full border border-border bg-card text-foreground placeholder:text-muted-foreground text-sm font-sans focus:outline-none focus:ring-2 focus:ring-foreground/20 transition-all"
+                      />
+                    </div>
+
+                    <FollowUpChips
+                      options={FOLLOW_UP_OPTIONS}
+                      onSelect={handlePrefSelect}
+                      selectedValues={selectedPrefs}
+                    />
+
+                    <div className="mt-6 flex justify-center">
+                      <motion.button
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.2 }}
+                        onClick={handleFilterSubmit}
+                        className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-foreground text-background font-sans text-sm font-medium hover:bg-foreground/80 transition-colors"
+                      >
+                        <span>Generate My Outfits</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </motion.button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
           </motion.div>
         ) : (
