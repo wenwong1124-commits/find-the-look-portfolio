@@ -22,7 +22,7 @@ const EXAMPLE_PROMPTS = [
 ];
 
 const FOLLOW_UP_OPTIONS: FollowUpOption[] = [
-  { label: "Who are you going with?", category: "companion", options: ["Solo", "Partner", "Friends", "Family"] },
+  { label: "Who are you going with?", category: "companion", options: ["Solo", "Partner", "Friends", "Family", "Colleagues", "Business Associates"] },
   { label: "What's your budget range?", category: "budget", options: ["Under $500", "$500–$1,500", "$1,500–$3,000", "$3,000+"] },
   { label: "How many days?", category: "days", options: ["1 day", "2–3 days", "4–5 days", "A week+"] },
   { label: "What season or month?", category: "season", options: ["Spring", "Summer", "Autumn", "Winter"] },

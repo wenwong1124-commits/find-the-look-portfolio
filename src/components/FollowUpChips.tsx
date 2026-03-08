@@ -49,7 +49,7 @@ export function FollowUpChips({ options, onSelect, selectedValues, currencySelec
                   {opt}
                 </button>
               ))}
-              {group.category === "style" && (
+              {(group.category === "style" || group.category === "companion") && (
                 <>
                   <button
                     onClick={() => {
@@ -69,7 +69,7 @@ export function FollowUpChips({ options, onSelect, selectedValues, currencySelec
                       type="text"
                       value={customInputs[group.category] || ""}
                       onChange={(e) => handleOtherInput(group.category, e.target.value)}
-                      placeholder="Type your style..."
+                      placeholder={group.category === "companion" ? "Type who you're with..." : "Type your style..."}
                       autoFocus
                       className="text-sm px-4 py-2 rounded-full border border-border bg-card text-foreground placeholder:text-muted-foreground font-sans focus:outline-none focus:ring-2 focus:ring-foreground/20 w-40"
                     />
