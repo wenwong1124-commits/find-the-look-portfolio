@@ -31,7 +31,10 @@ export function FollowUpChips({ options, onSelect, selectedValues, currencySelec
 
         return (
           <div key={gi}>
-            <p className="text-sm font-medium text-foreground mb-2 font-sans">{group.label}</p>
+            <div className="flex items-center gap-2 mb-2">
+              <p className="text-sm font-medium text-foreground font-sans">{group.label}</p>
+              {group.category === "budget" && currencySelector}
+            </div>
             <div className="flex flex-wrap gap-2 items-center">
               {group.options.map((opt) => (
                 <button
