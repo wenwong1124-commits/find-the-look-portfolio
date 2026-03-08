@@ -11,7 +11,7 @@ export async function streamChat({
   onDelta: (deltaText: string) => void;
   onDone: () => void;
 }) {
-  const maxRetries = 2;
+  const maxRetries = 3;
   let resp: Response | null = null;
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -26,7 +26,7 @@ export async function streamChat({
 
     if (resp.status === 429) {
       if (attempt < maxRetries - 1) {
-        await new Promise((r) => setTimeout(r, 4000 * (attempt + 1)));
+        await new Promise((r) => setTimeout(r, 6000 * (attempt + 1)));
         continue;
       }
       throw new Error("Rate limited — please try again in a moment.");
