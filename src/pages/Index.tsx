@@ -285,6 +285,25 @@ Rules:
                 Your AI-powered personal stylist. Tell us the occasion, and we'll curate the perfect capsule wardrobe for you.
               </p>
 
+              {/* Gender toggle */}
+              <div className="flex justify-center mb-4">
+                <div className="inline-flex rounded-full border border-border bg-card p-1">
+                  {(["women", "men", "unisex"] as const).map((g) => (
+                    <button
+                      key={g}
+                      onClick={() => setGender(g)}
+                      className={`text-sm px-5 py-2 rounded-full font-sans transition-all capitalize ${
+                        gender === g
+                          ? "bg-foreground text-background"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {g}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Mode toggle */}
               <div className="flex justify-center mb-8">
                 <div className="inline-flex rounded-full border border-border bg-card p-1">

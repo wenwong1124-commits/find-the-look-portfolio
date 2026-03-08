@@ -142,8 +142,8 @@ export function OutfitCard({ outfit, isSaved, onToggleSave, index }: OutfitCardP
         </button>
       </div>
 
-      {/* Flat-lay collage area */}
-      <div className="relative bg-secondary/30 aspect-[3/4] overflow-hidden">
+      {/* Flat-lay collage area — white background for transparent cutouts */}
+      <div className="relative bg-white aspect-[3/4] overflow-hidden">
         {outfit.items.map((item, i) => (
           <CollageItemImage key={i} item={item} index={i} outfitIndex={index} />
         ))}
