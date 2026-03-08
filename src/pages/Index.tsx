@@ -401,7 +401,7 @@ Rules:
             key="chat"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="pt-20 pb-24 px-4 max-w-3xl mx-auto"
+            className="pt-20 pb-24 px-4 max-w-6xl mx-auto"
           >
             <div className="space-y-6">
               {chatEntries.map((entry) => (
