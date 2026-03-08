@@ -399,7 +399,7 @@ Rules:
             key="chat"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="pt-20 pb-8 px-4 max-w-3xl mx-auto"
+            className="pt-20 pb-24 px-4 max-w-3xl mx-auto"
           >
             <div className="space-y-6">
               {chatEntries.map((entry) => (
@@ -466,6 +466,35 @@ Rules:
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Persistent chat input bar */}
+      {hasStarted && !showFollowUp && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="fixed bottom-0 left-0 right-0 bg-background/90 backdrop-blur-md border-t border-border py-3 px-4 z-40"
+        >
+          <div className="max-w-3xl mx-auto relative">
+            <input
+              ref={followUpInputRef}
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleChatFollowUp(input)}
+              placeholder={outfitsGenerated ? "Ask to refine, try different styles, or change anything..." : "Type a message..."}
+              disabled={isLoading}
+              className="w-full px-5 py-3 pr-12 rounded-full border border-border bg-card text-foreground placeholder:text-muted-foreground text-sm font-sans focus:outline-none focus:ring-2 focus:ring-foreground/20 transition-all disabled:opacity-50"
+            />
+            <button
+              onClick={() => handleChatFollowUp(input)}
+              disabled={!input.trim() || isLoading}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-foreground text-background hover:bg-foreground/80 transition-colors disabled:opacity-30"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 }
