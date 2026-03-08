@@ -49,7 +49,7 @@ export function FollowUpChips({ options, onSelect, selectedValues, currencySelec
                   {opt}
                 </button>
               ))}
-              {group.category === "style" && (
+              {(group.category === "style" || group.category === "companion") && (
                 <>
                   <button
                     onClick={() => {
