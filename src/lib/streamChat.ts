@@ -11,7 +11,7 @@ export async function streamChat({
   onDelta: (deltaText: string) => void;
   onDone: () => void;
 }) {
-  const maxRetries = 2;
+  const maxRetries = 3;
   let resp: Response | null = null;
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
