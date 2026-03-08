@@ -9,7 +9,7 @@ const memoryCache: Record<string, string> = {};
 // Global request queue to stagger API calls
 let requestQueue: Array<() => void> = [];
 let isProcessing = false;
-const DELAY_BETWEEN_REQUESTS = 2500; // 2.5s between requests
+const DELAY_BETWEEN_REQUESTS = 5000; // 5s between requests to avoid 429s
 
 function enqueueRequest(fn: () => void) {
   requestQueue.push(fn);
