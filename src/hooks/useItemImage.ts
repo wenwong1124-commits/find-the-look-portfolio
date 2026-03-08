@@ -47,7 +47,7 @@ function saveToDiskCache(key: string, url: string) {
   } catch {}
 }
 
-async function fetchWithRetry(prompt: string, retries = 1): Promise<string | null> {
+async function fetchWithRetry(prompt: string, retries = 2): Promise<string | null> {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const res = await fetch(FUNC_URL, {
