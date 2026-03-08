@@ -19,31 +19,34 @@ Isolated item on a pure white background, no shadows, no mannequin, no person.
 The item should look like a transparent PNG cutout — clean edges, flat-lay product photo style. 
 Professional e-commerce photography, centered composition.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image",
-        messages: [
-          { role: "user", content: imagePrompt }
-        ],
-        modalities: ["image", "text"],
-      }),
-    });
+    let response: Response | null = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash-image",
+          messages: [{ role: "user", content: imagePrompt }],
+          modalities: ["image", "text"],
+        }),
+      });
+
+      if (response.status === 429 && attempt < 2) {
+        await new Promise((r) => setTimeout(r, 6000 * (attempt + 1)));
+        continue;
+      }
+      break;
+    }
+
+    if (!response) throw new Error("No response from AI gateway");
 
     if (!response.ok) {
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limited, try again later." }), {
           status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Payment required." }), {
-          status: 402,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
@@ -56,9 +59,14 @@ Professional e-commerce photography, centered composition.`;
     }
 
     const data = await response.json();
-    const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    // Try multiple paths to find the image
+    const imageUrl =
+      data.choices?.[0]?.message?.images?.[0]?.image_url?.url ||
+      data.choices?.[0]?.message?.content?.find?.((p: any) => p.type === "image_url")?.image_url?.url ||
+      null;
 
     if (!imageUrl) {
+      console.error("No image in response. Full response:", JSON.stringify(data).slice(0, 2000));
       return new Response(JSON.stringify({ error: "No image generated" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
