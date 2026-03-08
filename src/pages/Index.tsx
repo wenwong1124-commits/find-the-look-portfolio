@@ -42,6 +42,7 @@ type InputMode = "occasion" | "filters";
 export default function Index() {
   const [input, setInput] = useState("");
   const [chatEntries, setChatEntries] = useState<ChatEntry[]>([]);
+  const [conversationHistory, setConversationHistory] = useState<Msg[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
   const [selectedPrefs, setSelectedPrefs] = useState<Record<string, string>>({});
@@ -49,8 +50,10 @@ export default function Index() {
   const [initialOccasion, setInitialOccasion] = useState("");
   const [currency, setCurrency] = useState("HKD");
   const [inputMode, setInputMode] = useState<InputMode>("occasion");
+  const [outfitsGenerated, setOutfitsGenerated] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const followUpInputRef = useRef<HTMLInputElement>(null);
   const { savedOutfits, saveOutfit, removeOutfit, isOutfitSaved } = useSavedOutfits();
 
   useEffect(() => {
