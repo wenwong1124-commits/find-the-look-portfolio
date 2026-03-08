@@ -49,6 +49,7 @@ export default function Index() {
   const [showFollowUp, setShowFollowUp] = useState(false);
   const [initialOccasion, setInitialOccasion] = useState("");
   const [currency, setCurrency] = useState("HKD");
+  const [gender, setGender] = useState<"women" | "men" | "unisex">("women");
   const [inputMode, setInputMode] = useState<InputMode>("occasion");
   const [outfitsGenerated, setOutfitsGenerated] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -117,7 +118,7 @@ export default function Index() {
             .filter(([k]) => k !== "occasion_text")
             .map(([k, v]) => `${k}: ${v}`)
             .join(", ");
-          return `Occasion: ${occ}. ${prefsText ? `Preferences: ${prefsText}.` : ""} Please generate 3 capsule outfit sets. Use ${currency} (${currencySymbol}) for all prices.`;
+          return `Occasion: ${occ}. Gender: ${gender}. ${prefsText ? `Preferences: ${prefsText}.` : ""} Please generate 3 capsule outfit sets. Use ${currency} (${currencySymbol}) for all prices.`;
         })();
 
     if (!followUpText && !occasion) {
@@ -171,6 +172,7 @@ When the user asks follow-up questions, feedback, or wants to refine:
 - Always end your response by asking if they'd like to adjust anything or try different styles
 
 Rules:
+- The user's gender preference is: ${gender}. Generate outfits appropriate for ${gender === "unisex" ? "any gender" : gender}'s fashion
 - Generate exactly 3 capsule outfit sets when providing outfits
 - Each outfit must have at least: top, bottom, shoes, bag, and 1 accessory
 - Use REAL fashion brands and realistic prices matching the user's budget in ${currency}
@@ -282,6 +284,25 @@ Rules:
               <p className="text-muted-foreground text-lg font-sans mb-8 max-w-md mx-auto leading-relaxed">
                 Your AI-powered personal stylist. Tell us the occasion, and we'll curate the perfect capsule wardrobe for you.
               </p>
+
+              {/* Gender toggle */}
+              <div className="flex justify-center mb-4">
+                <div className="inline-flex rounded-full border border-border bg-card p-1">
+                  {(["women", "men", "unisex"] as const).map((g) => (
+                    <button
+                      key={g}
+                      onClick={() => setGender(g)}
+                      className={`text-sm px-5 py-2 rounded-full font-sans transition-all capitalize ${
+                        gender === g
+                          ? "bg-foreground text-background"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {g}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               {/* Mode toggle */}
               <div className="flex justify-center mb-8">
