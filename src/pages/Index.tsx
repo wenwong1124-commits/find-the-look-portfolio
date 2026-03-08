@@ -103,18 +103,22 @@ export default function Index() {
     setSelectedPrefs((prev) => ({ ...prev, [category]: value }));
   };
 
-  const handleGenerateOutfits = async (occasion?: string, prefs?: Record<string, string>) => {
+  const handleGenerateOutfits = async (occasion?: string, prefs?: Record<string, string>, followUpText?: string) => {
     setShowFollowUp(false);
 
     const occ = occasion || initialOccasion;
     const p = prefs || selectedPrefs;
     const currencySymbol = getCurrencySymbol(currency);
 
-    const prefsText = Object.entries(p)
-      .filter(([k]) => k !== "occasion_text")
-      .map(([k, v]) => `${k}: ${v}`)
-      .join(", ");
-    const fullPrompt = `Occasion: ${occ}. ${prefsText ? `Preferences: ${prefsText}.` : ""} Please generate 3 capsule outfit sets. Use ${currency} (${currencySymbol}) for all prices.`;
+    const fullPrompt = followUpText
+      ? followUpText
+      : (() => {
+          const prefsText = Object.entries(p)
+            .filter(([k]) => k !== "occasion_text")
+            .map(([k, v]) => `${k}: ${v}`)
+            .join(", ");
+          return `Occasion: ${occ}. ${prefsText ? `Preferences: ${prefsText}.` : ""} Please generate 3 capsule outfit sets. Use ${currency} (${currencySymbol}) for all prices.`;
+        })();
 
     if (!occasion) {
       setChatEntries((prev) => [
