@@ -162,7 +162,10 @@ Rules:
           if (outfits.length > 0) {
             setChatEntries((prev) => {
               const newEntries = [...prev];
-              const lastAssistant = newEntries.findLastIndex((e) => e.role === "assistant" && !e.showFollowUp);
+              let lastAssistant = -1;
+              for (let i = newEntries.length - 1; i >= 0; i--) {
+                if (newEntries[i].role === "assistant" && !newEntries[i].showFollowUp) { lastAssistant = i; break; }
+              }
               if (lastAssistant >= 0) {
                 // Remove the JSON block from displayed text
                 const cleanText = assistantText.replace(/```json[\s\S]*?```/, "").trim();
