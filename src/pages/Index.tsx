@@ -175,14 +175,19 @@ Rules:
         messages,
         onDelta: (chunk) => {
           assistantText += chunk;
+          // Strip JSON code blocks and any partial ```json block from displayed text
+          const displayText = assistantText
+            .replace(/```json[\s\S]*?```/g, "")
+            .replace(/```json[\s\S]*$/g, "")
+            .trim();
           setChatEntries((prev) => {
             const last = prev[prev.length - 1];
             if (last?.role === "assistant" && !last.showFollowUp) {
               return prev.map((e, i) =>
-                i === prev.length - 1 ? { ...e, content: assistantText } : e
+                i === prev.length - 1 ? { ...e, content: displayText } : e
               );
             }
-            return [...prev, { id: crypto.randomUUID(), role: "assistant", content: assistantText }];
+            return [...prev, { id: crypto.randomUUID(), role: "assistant", content: displayText }];
           });
         },
         onDone: () => {
