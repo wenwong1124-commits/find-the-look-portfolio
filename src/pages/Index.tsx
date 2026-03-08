@@ -386,6 +386,7 @@ Rules:
                             options={FOLLOW_UP_OPTIONS}
                             onSelect={handlePrefSelect}
                             selectedValues={selectedPrefs}
+                            currencySelector={<CurrencySelector value={currency} onChange={setCurrency} />}
                           />
                           <motion.button
                             initial={{ opacity: 0 }}
