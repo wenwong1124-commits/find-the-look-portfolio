@@ -36,7 +36,7 @@ export default function SavedOutfits() {
             </Link>
           </motion.div>
         ) : (
-          <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {savedOutfits.map((saved, i) => (
               <OutfitCard
                 key={saved.id}
