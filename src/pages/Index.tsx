@@ -248,6 +248,7 @@ Rules:
     ]);
 
     handleGenerateOutfits(initialOccasion, selectedPrefs, text.trim());
+  };
 
   const handleFollowUpSubmit = () => {
     handleGenerateOutfits();
