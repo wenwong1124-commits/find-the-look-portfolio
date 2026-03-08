@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { CapsuleOutfit } from "@/types/outfit";
+import { CapsuleOutfit, OutfitItem } from "@/types/outfit";
 import { Heart, ExternalLink, ChevronDown, ChevronUp } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useItemImage } from "@/hooks/useItemImage";
 
 interface OutfitCardProps {
   outfit: CapsuleOutfit;
@@ -40,6 +41,74 @@ const categoryBgColors = [
   "bg-[hsl(270,8%,90%)]",
 ];
 
+function ItemImage({ item, index }: { item: OutfitItem; index: number }) {
+  const { imageUrl, isLoading } = useItemImage(item.name, item.brand, item.category);
+
+  if (isLoading) {
+    return (
+      <div className={cn(
+        "w-12 h-12 rounded-md flex items-center justify-center text-xl flex-shrink-0 animate-pulse",
+        categoryBgColors[index % categoryBgColors.length]
+      )}>
+        <span className="text-sm">{categoryEmojis[item.category] || "👔"}</span>
+      </div>
+    );
+  }
+
+  if (imageUrl) {
+    return (
+      <img
+        src={imageUrl}
+        alt={`${item.brand} ${item.name}`}
+        className="w-12 h-12 rounded-md object-cover flex-shrink-0"
+      />
+    );
+  }
+
+  return (
+    <div className={cn(
+      "w-12 h-12 rounded-md flex items-center justify-center text-xl flex-shrink-0",
+      categoryBgColors[index % categoryBgColors.length]
+    )}>
+      {categoryEmojis[item.category] || "👔"}
+    </div>
+  );
+}
+
+function CollageItemImage({ item, index, outfitIndex }: { item: OutfitItem; index: number; outfitIndex: number }) {
+  const { imageUrl, isLoading } = useItemImage(item.name, item.brand, item.category);
+  const pos = categoryPositions[item.category] || `top-[${10 + index * 12}%] left-[${10 + index * 8}%] w-[35%] z-${10 + index}`;
+
+  return (
+    <motion.div
+      key={index}
+      initial={{ opacity: 0, scale: 0.8, rotate: -5 + Math.random() * 10 }}
+      animate={{ opacity: 1, scale: 1, rotate: -3 + index * 2 }}
+      transition={{ duration: 0.4, delay: outfitIndex * 0.15 + index * 0.08 }}
+      className={cn(
+        "absolute rounded-lg shadow-md overflow-hidden",
+        !imageUrl && categoryBgColors[index % categoryBgColors.length],
+        pos
+      )}
+      style={{ aspectRatio: item.category === "accessory" ? "1" : "3/4" }}
+    >
+      {imageUrl ? (
+        <img
+          src={imageUrl}
+          alt={`${item.brand} ${item.name}`}
+          className="w-full h-full object-cover"
+        />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center">
+          <span className={cn("drop-shadow-sm", isLoading ? "text-3xl animate-pulse" : "text-4xl sm:text-5xl")}>
+            {categoryEmojis[item.category] || "👔"}
+          </span>
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
 export function OutfitCard({ outfit, isSaved, onToggleSave, index }: OutfitCardProps) {
   const [expanded, setExpanded] = useState(false);
   const visibleItems = expanded ? outfit.items : outfit.items.slice(0, 3);
@@ -53,39 +122,16 @@ export function OutfitCard({ outfit, isSaved, onToggleSave, index }: OutfitCardP
     >
       {/* Flat-lay collage area */}
       <div className="relative bg-secondary/50 aspect-[4/3] overflow-hidden">
-        {outfit.items.map((item, i) => {
-          const pos = categoryPositions[item.category] || `top-[${10 + i * 12}%] left-[${10 + i * 8}%] w-[35%] z-${10 + i}`;
-          return (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, scale: 0.8, rotate: -5 + Math.random() * 10 }}
-              animate={{ opacity: 1, scale: 1, rotate: -3 + i * 2 }}
-              transition={{ duration: 0.4, delay: index * 0.15 + i * 0.08 }}
-              className={cn(
-                "absolute rounded-lg shadow-md flex items-center justify-center",
-                categoryBgColors[i % categoryBgColors.length],
-                pos
-              )}
-              style={{ aspectRatio: item.category === "accessory" ? "1" : "3/4" }}
-            >
-              <span className="text-4xl sm:text-5xl drop-shadow-sm">
-                {categoryEmojis[item.category] || "👔"}
-              </span>
-            </motion.div>
-          );
-        })}
+        {outfit.items.map((item, i) => (
+          <CollageItemImage key={i} item={item} index={i} outfitIndex={index} />
+        ))}
       </div>
 
       {/* Compact item list */}
       <div className="divide-y divide-border">
         {visibleItems.map((item, i) => (
           <div key={i} className="flex items-center gap-3 px-4 py-3">
-            <div className={cn(
-              "w-12 h-12 rounded-md flex items-center justify-center text-xl flex-shrink-0",
-              categoryBgColors[i % categoryBgColors.length]
-            )}>
-              {categoryEmojis[item.category] || "👔"}
-            </div>
+            <ItemImage item={item} index={i} />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-foreground font-sans truncate">{item.brand}</p>
               <p className="text-xs text-muted-foreground font-sans truncate">{item.name}</p>
@@ -120,14 +166,21 @@ export function OutfitCard({ outfit, isSaved, onToggleSave, index }: OutfitCardP
         </button>
       )}
 
-      {/* Footer */}
+      {/* Footer with occasion and save */}
       <div className="flex items-center justify-between px-4 py-3 border-t border-border">
-        <span className="text-xs text-muted-foreground font-sans">
-          {outfit.name}
-        </span>
+        <div className="min-w-0">
+          <span className="text-xs font-medium text-foreground font-sans block truncate">
+            {outfit.name}
+          </span>
+          {outfit.occasion && (
+            <span className="text-[11px] text-muted-foreground font-sans block truncate">
+              For: {outfit.occasion}
+            </span>
+          )}
+        </div>
         <button
           onClick={onToggleSave}
-          className="p-1.5 rounded-full hover:bg-secondary transition-colors"
+          className="p-1.5 rounded-full hover:bg-secondary transition-colors flex-shrink-0"
           aria-label={isSaved ? "Remove from saved" : "Save outfit"}
         >
           <Heart
