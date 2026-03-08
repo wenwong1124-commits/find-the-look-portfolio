@@ -49,6 +49,7 @@ export default function Index() {
   const [showFollowUp, setShowFollowUp] = useState(false);
   const [initialOccasion, setInitialOccasion] = useState("");
   const [currency, setCurrency] = useState("HKD");
+  const [gender, setGender] = useState<"women" | "men" | "unisex">("women");
   const [inputMode, setInputMode] = useState<InputMode>("occasion");
   const [outfitsGenerated, setOutfitsGenerated] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
