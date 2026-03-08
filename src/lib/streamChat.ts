@@ -11,18 +11,30 @@ export async function streamChat({
   onDelta: (deltaText: string) => void;
   onDone: () => void;
 }) {
-  const resp = await fetch(CHAT_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-    },
-    body: JSON.stringify({ messages }),
-  });
+  const maxRetries = 2;
+  let resp: Response | null = null;
 
-  if (resp.status === 429) {
-    throw new Error("Rate limited — please try again in a moment.");
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    resp = await fetch(CHAT_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+      body: JSON.stringify({ messages }),
+    });
+
+    if (resp.status === 429) {
+      if (attempt < maxRetries - 1) {
+        await new Promise((r) => setTimeout(r, 4000 * (attempt + 1)));
+        continue;
+      }
+      throw new Error("Rate limited — please try again in a moment.");
+    }
+    break;
   }
+
+  if (!resp) throw new Error("Failed to connect");
   if (resp.status === 402) {
     throw new Error("Usage limit reached. Please add credits.");
   }
