@@ -5,6 +5,7 @@ interface FollowUpChipsProps {
   options: { label: string; category: string; options: string[] }[];
   onSelect: (category: string, value: string) => void;
   selectedValues: Record<string, string>;
+  currencySelector?: React.ReactNode;
 }
 
 export function FollowUpChips({ options, onSelect, selectedValues }: FollowUpChipsProps) {

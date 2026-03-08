@@ -241,11 +241,6 @@ Rules:
                 Your AI-powered personal stylist. Tell us the occasion, and we'll curate the perfect capsule wardrobe for you.
               </p>
 
-              {/* Currency selector */}
-              <div className="flex justify-center mb-6">
-                <CurrencySelector value={currency} onChange={setCurrency} />
-              </div>
-
               {/* Mode toggle */}
               <div className="flex justify-center mb-8">
                 <div className="inline-flex rounded-full border border-border bg-card p-1">
