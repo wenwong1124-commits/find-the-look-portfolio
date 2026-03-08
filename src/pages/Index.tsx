@@ -42,6 +42,7 @@ type InputMode = "occasion" | "filters";
 export default function Index() {
   const [input, setInput] = useState("");
   const [chatEntries, setChatEntries] = useState<ChatEntry[]>([]);
+  const [conversationHistory, setConversationHistory] = useState<Msg[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
   const [selectedPrefs, setSelectedPrefs] = useState<Record<string, string>>({});
@@ -49,8 +50,10 @@ export default function Index() {
   const [initialOccasion, setInitialOccasion] = useState("");
   const [currency, setCurrency] = useState("HKD");
   const [inputMode, setInputMode] = useState<InputMode>("occasion");
+  const [outfitsGenerated, setOutfitsGenerated] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const followUpInputRef = useRef<HTMLInputElement>(null);
   const { savedOutfits, saveOutfit, removeOutfit, isOutfitSaved } = useSavedOutfits();
 
   useEffect(() => {
@@ -100,20 +103,28 @@ export default function Index() {
     setSelectedPrefs((prev) => ({ ...prev, [category]: value }));
   };
 
-  const handleGenerateOutfits = async (occasion?: string, prefs?: Record<string, string>) => {
+  const handleGenerateOutfits = async (occasion?: string, prefs?: Record<string, string>, followUpText?: string) => {
     setShowFollowUp(false);
 
     const occ = occasion || initialOccasion;
     const p = prefs || selectedPrefs;
     const currencySymbol = getCurrencySymbol(currency);
 
-    const prefsText = Object.entries(p)
-      .filter(([k]) => k !== "occasion_text")
-      .map(([k, v]) => `${k}: ${v}`)
-      .join(", ");
-    const fullPrompt = `Occasion: ${occ}. ${prefsText ? `Preferences: ${prefsText}.` : ""} Please generate 3 capsule outfit sets. Use ${currency} (${currencySymbol}) for all prices.`;
+    const fullPrompt = followUpText
+      ? followUpText
+      : (() => {
+          const prefsText = Object.entries(p)
+            .filter(([k]) => k !== "occasion_text")
+            .map(([k, v]) => `${k}: ${v}`)
+            .join(", ");
+          return `Occasion: ${occ}. ${prefsText ? `Preferences: ${prefsText}.` : ""} Please generate 3 capsule outfit sets. Use ${currency} (${currencySymbol}) for all prices.`;
+        })();
 
-    if (!occasion) {
+    if (!followUpText && !occasion) {
+      const prefsText = Object.entries(p)
+        .filter(([k]) => k !== "occasion_text")
+        .map(([k, v]) => `${k}: ${v}`)
+        .join(", ");
       setChatEntries((prev) => [
         ...prev,
         { id: crypto.randomUUID(), role: "user", content: prefsText ? `My preferences: ${prefsText}` : "Generate outfits for me!" },
@@ -123,8 +134,8 @@ export default function Index() {
     setIsLoading(true);
 
     const systemPrompt = `You are StyleCapsule, an expert AI fashion stylist. The user wants outfit recommendations.
-    
-IMPORTANT: Return your response in TWO parts:
+
+When the user ASKS FOR NEW OUTFITS or this is the first request, return your response in TWO parts:
 1. A brief, warm introduction (2-3 sentences) about why these outfits work for their occasion.
 2. A JSON block with the outfit data in this EXACT format:
 
@@ -153,20 +164,30 @@ IMPORTANT: Return your response in TWO parts:
 ]
 \`\`\`
 
+When the user asks follow-up questions, feedback, or wants to refine:
+- If they want different outfits or modifications, generate new outfit JSON blocks
+- If they ask general styling questions, answer conversationally without JSON
+- Always end your response by asking if they'd like to adjust anything or try different styles
+
 Rules:
-- Generate exactly 3 capsule outfit sets
+- Generate exactly 3 capsule outfit sets when providing outfits
 - Each outfit must have at least: top, bottom, shoes, bag, and 1 accessory
 - Use REAL fashion brands and realistic prices matching the user's budget in ${currency}
 - shopUrl should link to the actual brand's website (e.g., https://www.zara.com, https://www.cos.com)
 - Mix brands across outfits for variety
 - Adapt to the season, occasion, and style preferences
 - Keep explanations concise and inspiring
-- ALL prices must be in ${currency} (${currencySymbol})`;
+- ALL prices must be in ${currency} (${currencySymbol})
+- After showing outfits, ask if they're happy or want changes (e.g. "Want me to make it more casual?" or "Should I try different brands?")`;
 
     const messages: Msg[] = [
       { role: "system", content: systemPrompt },
+      ...conversationHistory,
       { role: "user", content: fullPrompt },
     ];
+
+    // Update conversation history
+    setConversationHistory((prev) => [...prev, { role: "user", content: fullPrompt }]);
 
     let assistantText = "";
 
@@ -175,7 +196,6 @@ Rules:
         messages,
         onDelta: (chunk) => {
           assistantText += chunk;
-          // Strip JSON code blocks and any partial ```json block from displayed text
           const displayText = assistantText
             .replace(/```json[\s\S]*?```/g, "")
             .replace(/```json[\s\S]*$/g, "")
@@ -206,6 +226,9 @@ Rules:
               return newEntries;
             });
           }
+          // Save assistant response to conversation history
+          setConversationHistory((prev) => [...prev, { role: "assistant", content: assistantText }]);
+          setOutfitsGenerated(true);
           setIsLoading(false);
         },
       });
@@ -213,6 +236,18 @@ Rules:
       toast.error(e.message || "Something went wrong. Please try again.");
       setIsLoading(false);
     }
+  };
+
+  const handleChatFollowUp = async (text: string) => {
+    if (!text.trim() || isLoading) return;
+    setInput("");
+
+    setChatEntries((prev) => [
+      ...prev,
+      { id: crypto.randomUUID(), role: "user", content: text.trim() },
+    ]);
+
+    handleGenerateOutfits(initialOccasion, selectedPrefs, text.trim());
   };
 
   const handleFollowUpSubmit = () => {
@@ -364,7 +399,7 @@ Rules:
             key="chat"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="pt-20 pb-8 px-4 max-w-3xl mx-auto"
+            className="pt-20 pb-24 px-4 max-w-3xl mx-auto"
           >
             <div className="space-y-6">
               {chatEntries.map((entry) => (
@@ -431,6 +466,35 @@ Rules:
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Persistent chat input bar */}
+      {hasStarted && !showFollowUp && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="fixed bottom-0 left-0 right-0 bg-background/90 backdrop-blur-md border-t border-border py-3 px-4 z-40"
+        >
+          <div className="max-w-3xl mx-auto relative">
+            <input
+              ref={followUpInputRef}
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleChatFollowUp(input)}
+              placeholder={outfitsGenerated ? "Ask to refine, try different styles, or change anything..." : "Type a message..."}
+              disabled={isLoading}
+              className="w-full px-5 py-3 pr-12 rounded-full border border-border bg-card text-foreground placeholder:text-muted-foreground text-sm font-sans focus:outline-none focus:ring-2 focus:ring-foreground/20 transition-all disabled:opacity-50"
+            />
+            <button
+              onClick={() => handleChatFollowUp(input)}
+              disabled={!input.trim() || isLoading}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-foreground text-background hover:bg-foreground/80 transition-colors disabled:opacity-30"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 }
