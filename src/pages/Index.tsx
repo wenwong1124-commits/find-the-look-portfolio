@@ -310,6 +310,7 @@ Use REAL brands, realistic ${currency} prices. After showing outfits, ask if the
     setIsLoading(true);
     const currencySymbol = getCurrencySymbol(currency);
 
+    const feedbackContext = getFeedbackSummary();
     const systemPrompt = `You are StyleCapsule, an elite AI fashion stylist. The user previously received outfit suggestions and wants refinements.
 
 If they ask for different outfits or modifications, generate new outfit JSON blocks in the same format.
@@ -321,7 +322,7 @@ IMPORTANT — maintain consistency:
 - Maintain texture contrast and pairing quality.
 - Include the same level of accessory completeness — if original outfits had specific jewelry, hats, scarves etc., keep including them.
 - Use specific color names and material descriptions.
-
+${feedbackContext}
 Rules:
 - Gender: ${gender}
 - Budget: ${budget}
