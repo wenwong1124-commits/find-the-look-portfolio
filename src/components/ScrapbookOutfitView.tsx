@@ -8,7 +8,7 @@ const TAPE_COLORS = ["tape-pink", "tape-green", "tape-blue", ""];
 const ANNOTATIONS = ["♡", "✦", "★", "→", "◯", "✿"];
 
 function ScrapbookItem({ item, index }: { item: OutfitItem; index: number }) {
-  const { imageUrl, emoji } = useItemImage(item.name, item.brand, item.category);
+  const { imageUrl, emoji } = useItemImage(item.name, item.brand, item.category, item.color, item.material);
   const rotation = ROTATIONS[index % ROTATIONS.length];
   const tapeColor = TAPE_COLORS[index % TAPE_COLORS.length];
   const showTape = index % 3 !== 1;
