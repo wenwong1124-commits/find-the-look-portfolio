@@ -125,8 +125,8 @@ export function useItemImage(
       return;
     }
 
-    if (fetchedRef.current) return;
-    fetchedRef.current = true;
+    if (fetchedKeyRef.current === cacheKey) return;
+    fetchedKeyRef.current = cacheKey;
 
     // Build a rich query with color + material for style-accurate results
     const parts = [brand, itemDescription];
