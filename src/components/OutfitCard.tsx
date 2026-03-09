@@ -20,6 +20,12 @@ const categoryEmojis: Record<string, string> = {
   accessory: "💍",
   outerwear: "🧥",
   dress: "👗",
+  hat: "🎩",
+  scarf: "🧣",
+  belt: "🪢",
+  jewelry: "💎",
+  sunglasses: "🕶️",
+  watch: "⌚",
 };
 
 const categoryBgColors = [

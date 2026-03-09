@@ -5,7 +5,7 @@ export interface OutfitItem {
   currency: string;
   color: string;
   material: string;
-  category: "top" | "bottom" | "shoes" | "bag" | "accessory" | "outerwear" | "dress";
+  category: "top" | "bottom" | "shoes" | "bag" | "accessory" | "outerwear" | "dress" | "hat" | "scarf" | "belt" | "jewelry" | "sunglasses" | "watch";
   sizes: string[];
   shopUrl: string;
   imageDescription: string;
