@@ -49,7 +49,7 @@ function ScrapbookItem({ item, index, total }: { item: OutfitItem; index: number
       <div className="bg-card border border-border/30 p-1.5 shadow-sm relative" style={{ transform: `rotate(${rotation * 0.3}deg)` }}>
         <div className="w-full aspect-square bg-muted flex items-center justify-center text-2xl relative overflow-hidden">
           <span className={`transition-opacity duration-300 ${imageUrl ? "opacity-0" : "opacity-100"}`}>
-            {item.category === "top" ? "👕" : item.category === "bottom" ? "👖" : item.category === "shoes" ? "👢" : item.category === "bag" ? "👜" : item.category === "dress" ? "👗" : "👔"}
+            {item.category === "top" ? "👕" : item.category === "bottom" ? "👖" : item.category === "shoes" ? "👢" : item.category === "bag" ? "👜" : item.category === "dress" ? "👗" : item.category === "hat" ? "🎩" : item.category === "scarf" ? "🧣" : item.category === "belt" ? "🪢" : item.category === "jewelry" ? "💎" : item.category === "sunglasses" ? "🕶️" : item.category === "watch" ? "⌚" : item.category === "outerwear" ? "🧥" : "👔"}
           </span>
           {imageUrl && (
             <motion.img
