@@ -26,60 +26,62 @@ async function withConcurrencyLimit<T>(
   return results;
 }
 
-// ── Gemini Image Generation ──
+// ── Gemini Image Generation (fast model) ──
 async function generateProductImage(
   lovableApiKey: string,
   query: string
 ): Promise<string | null> {
-  try {
-    const prompt = `Product photo on clean white background: ${query}. Fashion e-commerce product photography style. Clean, professional, no model, item centered, soft studio lighting. High quality product shot.`;
+  const prompt = `Simple product photo, white background: ${query}. Clean e-commerce style, centered item.`;
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 6000); // 6s timeout
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
 
-    const response = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${lovableApiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-3-pro-image-preview",
-          messages: [{ role: "user", content: prompt }],
-          modalities: ["image", "text"],
-        }),
-        signal: controller.signal,
+      const response = await fetch(
+        "https://ai.gateway.lovable.dev/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${lovableApiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash-image",
+            messages: [{ role: "user", content: prompt }],
+            modalities: ["image", "text"],
+          }),
+          signal: controller.signal,
+        }
+      );
+
+      clearTimeout(timeout);
+
+      if (response.status === 429 && attempt === 0) {
+        await new Promise((r) => setTimeout(r, 1000));
+        continue;
       }
-    );
 
-    clearTimeout(timeout);
+      if (!response.ok) {
+        console.error(`Image gen error for "${query}":`, response.status);
+        return null;
+      }
 
-    if (!response.ok) {
-      console.error(`Gemini image gen error for "${query}":`, response.status);
+      const data = await response.json();
+      const imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+      
+      if (imageData?.startsWith("data:image")) {
+        return imageData;
+      }
+      return null;
+    } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") {
+        console.warn(`Timeout for "${query}"`);
+      }
       return null;
     }
-
-    const data = await response.json();
-    
-    // Extract base64 image from response
-    const imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    
-    if (imageData && imageData.startsWith("data:image")) {
-      return imageData;
-    }
-
-    console.warn(`No image generated for "${query}"`);
-    return null;
-  } catch (e) {
-    if (e instanceof DOMException && e.name === "AbortError") {
-      console.warn(`Gemini image timeout for "${query}"`);
-    } else {
-      console.error(`Gemini image gen error for "${query}":`, e);
-    }
-    return null;
   }
+  return null;
 }
 
 serve(async (req) => {
@@ -115,7 +117,7 @@ serve(async (req) => {
       return url;
     });
 
-    await withConcurrencyLimit(tasks, 10);
+    await withConcurrencyLimit(tasks, 4);
 
     const found = Object.values(results).filter(Boolean).length;
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
