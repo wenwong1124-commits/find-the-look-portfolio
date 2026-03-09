@@ -34,7 +34,8 @@ serve(async (req) => {
     }
 
     let response: Response | null = null;
-    for (let attempt = 0; attempt < 3; attempt++) {
+    const maxAttempts = 5;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
       response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -42,13 +43,15 @@ serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
+          model: "google/gemini-2.5-flash-lite",
           messages: processedMessages,
           stream: true,
         }),
       });
-      if (response.status === 429 && attempt < 2) {
-        await new Promise((r) => setTimeout(r, 10000 * (attempt + 1)));
+      if (response.status === 429 && attempt < maxAttempts - 1) {
+        const wait = 15000 * (attempt + 1);
+        console.log(`Rate limited (attempt ${attempt + 1}/${maxAttempts}), waiting ${wait / 1000}s...`);
+        await new Promise((r) => setTimeout(r, wait));
         continue;
       }
       break;
