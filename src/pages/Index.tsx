@@ -15,12 +15,14 @@ import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 
 const SCRAPBOOK_IMAGES = [
-  { src: "/images/scrapbook-1.jpg", style: { top: "6%", left: "3%", width: "180px", transform: "rotate(-8deg)" } },
-  { src: "/images/scrapbook-2.jpg", style: { top: "4%", right: "5%", width: "160px", transform: "rotate(5deg)" } },
-  { src: "/images/scrapbook-3.jpg", style: { top: "38%", left: "2%", width: "150px", transform: "rotate(10deg)" } },
-  { src: "/images/scrapbook-4.jpg", style: { bottom: "18%", right: "3%", width: "170px", transform: "rotate(-4deg)" } },
-  { src: "/images/scrapbook-5.jpg", style: { bottom: "5%", left: "6%", width: "140px", transform: "rotate(6deg)" } },
-  { src: "/images/scrapbook-6.jpg", style: { top: "58%", right: "6%", width: "130px", transform: "rotate(-6deg)" } },
+  { src: "/images/hero-1.jpg", style: { top: "3%", left: "2%", width: "190px", transform: "rotate(-7deg)" } },
+  { src: "/images/hero-2.jpg", style: { top: "2%", right: "3%", width: "175px", transform: "rotate(5deg)" } },
+  { src: "/images/hero-3.jpg", style: { top: "35%", left: "1%", width: "160px", transform: "rotate(9deg)" } },
+  { src: "/images/hero-4.jpg", style: { top: "30%", right: "2%", width: "155px", transform: "rotate(-6deg)" } },
+  { src: "/images/hero-5.jpg", style: { bottom: "18%", left: "3%", width: "170px", transform: "rotate(-4deg)" } },
+  { src: "/images/hero-6.jpg", style: { bottom: "15%", right: "4%", width: "150px", transform: "rotate(7deg)" } },
+  { src: "/images/hero-7.jpg", style: { bottom: "2%", left: "18%", width: "145px", transform: "rotate(3deg)" } },
+  { src: "/images/hero-8.jpg", style: { top: "60%", right: "18%", width: "140px", transform: "rotate(-8deg)" } },
 ];
 
 const HANDWRITTEN_LABELS = [
