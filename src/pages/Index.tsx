@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, ArrowRight } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
@@ -13,12 +13,43 @@ import { CapsuleOutfit, FollowUpOption } from "@/types/outfit";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 
-const EXAMPLE_PROMPTS = [
+const ALL_PROMPTS = [
   "Weekend trip to Japan 🇯🇵",
   "Summer wedding guest 💒",
   "First day at a new job 💼",
   "Casual brunch date ☕",
   "Music festival weekend 🎵",
+  "Art gallery opening 🎨",
+  "Rooftop cocktails 🍸",
+  "Ski trip to Aspen ⛷️",
+  "Coachella weekend 🌵",
+  "Board meeting 📊",
+  "Yacht party ⛵",
+  "Graduation ceremony 🎓",
+  "Beach holiday in Bali 🏖️",
+  "Paris fashion week 🗼",
+  "Date night dinner 🕯️",
+  "Hiking in Patagonia 🏔️",
+  "Holiday office party 🎄",
+  "Tropical honeymoon 🌺",
+  "Street style in Seoul 🇰🇷",
+  "Vineyard tour in Tuscany 🍷",
+  "New Year's Eve gala 🥂",
+  "London theatre evening 🎭",
+];
+
+function pickRandom<T>(arr: T[], count: number): T[] {
+  const shuffled = [...arr].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count);
+}
+
+const SCRAPBOOK_IMAGES = [
+  { src: "/images/scrapbook-1.jpg", className: "top-[5%] left-[2%] w-28 sm:w-36 -rotate-6" },
+  { src: "/images/scrapbook-2.jpg", className: "top-[8%] right-[3%] w-24 sm:w-32 rotate-3" },
+  { src: "/images/scrapbook-3.jpg", className: "top-[35%] left-[5%] w-20 sm:w-28 rotate-[8deg]" },
+  { src: "/images/scrapbook-4.jpg", className: "bottom-[20%] right-[4%] w-26 sm:w-34 -rotate-[5deg]" },
+  { src: "/images/scrapbook-5.jpg", className: "bottom-[8%] left-[8%] w-22 sm:w-30 rotate-[4deg]" },
+  { src: "/images/scrapbook-6.jpg", className: "top-[55%] right-[8%] w-20 sm:w-26 -rotate-[3deg]" },
 ];
 
 const FOLLOW_UP_OPTIONS: FollowUpOption[] = [
@@ -57,6 +88,8 @@ export default function Index() {
   const inputRef = useRef<HTMLInputElement>(null);
   const followUpInputRef = useRef<HTMLInputElement>(null);
   const { savedOutfits, saveOutfit, removeOutfit, isOutfitSaved } = useSavedOutfits();
+
+  const randomPrompts = useMemo(() => pickRandom(ALL_PROMPTS, 5), []);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -137,6 +170,8 @@ export default function Index() {
 
     const systemPrompt = `You are StyleCapsule, an expert AI fashion stylist. The user wants outfit recommendations.
 
+If the user provides specific item data (brands, prices, URLs, product details), use those EXACT items in the outfit recommendations instead of generating new ones. Incorporate user-provided items faithfully.
+
 When the user ASKS FOR NEW OUTFITS or this is the first request, return your response in TWO parts:
 1. A brief, warm introduction (2-3 sentences) about why these outfits work for their occasion.
 2. A JSON block with the outfit data in this EXACT format:
@@ -191,7 +226,6 @@ Rules:
       { role: "user", content: fullPrompt },
     ];
 
-    // Update conversation history
     setConversationHistory((prev) => [...prev, { role: "user", content: fullPrompt }]);
 
     let assistantText = "";
@@ -231,7 +265,6 @@ Rules:
               return newEntries;
             });
           }
-          // Save assistant response to conversation history
           setConversationHistory((prev) => [...prev, { role: "assistant", content: assistantText }]);
           setOutfitsGenerated(true);
           setIsLoading(false);
@@ -270,153 +303,175 @@ Rules:
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, y: -20 }}
-            className="flex flex-col items-center justify-center min-h-screen px-6"
+            className="relative min-h-screen overflow-hidden"
           >
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
-              className="text-center max-w-2xl w-full"
-            >
-              <h1 className="text-5xl sm:text-7xl font-light tracking-[0.25em] text-foreground mb-4 uppercase" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
-                STYLE
-                <span className="block text-accent font-normal">CAPSULE</span>
-              </h1>
-              <p className="text-muted-foreground text-lg font-sans mb-8 max-w-md mx-auto leading-relaxed">
-                Your AI-powered personal stylist. Tell us the occasion, and we'll curate the perfect capsule wardrobe for you.
-              </p>
+            {/* Scrapbook fashion images */}
+            <div className="absolute inset-0 pointer-events-none z-0 hidden sm:block">
+              {SCRAPBOOK_IMAGES.map((img, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 0.35, scale: 1 }}
+                  transition={{ duration: 0.8, delay: 0.15 * i }}
+                  className={`absolute ${img.className}`}
+                >
+                  <img
+                    src={img.src}
+                    alt=""
+                    className="rounded-lg shadow-lg object-cover w-full aspect-[3/4]"
+                  />
+                </motion.div>
+              ))}
+            </div>
 
-              {/* Gender toggle */}
-              <div className="flex justify-center mb-4">
-                <div className="inline-flex rounded-full border border-border bg-card p-1">
-                  {(["women", "men", "unisex"] as const).map((g) => (
+            {/* Content */}
+            <div className="relative z-10 flex flex-col items-center pt-28 sm:pt-32 pb-16 px-6">
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8 }}
+                className="text-center max-w-2xl w-full"
+              >
+                <h1 className="text-5xl sm:text-7xl font-light tracking-[0.25em] text-foreground mb-4 uppercase" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
+                  STYLE
+                  <span className="block text-accent font-normal">CAPSULE</span>
+                </h1>
+                <p className="text-muted-foreground text-lg font-sans mb-8 max-w-md mx-auto leading-relaxed">
+                  Your AI-powered personal stylist. Tell us the occasion, and we'll curate the perfect capsule wardrobe for you.
+                </p>
+
+                {/* Gender toggle */}
+                <div className="flex justify-center mb-4">
+                  <div className="inline-flex rounded-full border border-border bg-card p-1">
+                    {(["women", "men", "unisex"] as const).map((g) => (
+                      <button
+                        key={g}
+                        onClick={() => setGender(g)}
+                        className={`text-sm px-5 py-2 rounded-full font-sans transition-all capitalize ${
+                          gender === g
+                            ? "bg-foreground text-background"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {g}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Mode toggle */}
+                <div className="flex justify-center mb-8">
+                  <div className="inline-flex rounded-full border border-border bg-card p-1">
                     <button
-                      key={g}
-                      onClick={() => setGender(g)}
-                      className={`text-sm px-5 py-2 rounded-full font-sans transition-all capitalize ${
-                        gender === g
+                      onClick={() => setInputMode("occasion")}
+                      className={`text-sm px-5 py-2 rounded-full font-sans transition-all ${
+                        inputMode === "occasion"
                           ? "bg-foreground text-background"
                           : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
-                      {g}
+                      By Occasion
                     </button>
-                  ))}
+                    <button
+                      onClick={() => setInputMode("filters")}
+                      className={`text-sm px-5 py-2 rounded-full font-sans transition-all ${
+                        inputMode === "filters"
+                          ? "bg-foreground text-background"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      By Filters
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              {/* Mode toggle */}
-              <div className="flex justify-center mb-8">
-                <div className="inline-flex rounded-full border border-border bg-card p-1">
-                  <button
-                    onClick={() => setInputMode("occasion")}
-                    className={`text-sm px-5 py-2 rounded-full font-sans transition-all ${
-                      inputMode === "occasion"
-                        ? "bg-foreground text-background"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    By Occasion
-                  </button>
-                  <button
-                    onClick={() => setInputMode("filters")}
-                    className={`text-sm px-5 py-2 rounded-full font-sans transition-all ${
-                      inputMode === "filters"
-                        ? "bg-foreground text-background"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    By Filters
-                  </button>
-                </div>
-              </div>
-
-              <AnimatePresence mode="wait">
-                {inputMode === "occasion" ? (
-                  <motion.div
-                    key="occasion-mode"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    {/* Main Input */}
-                    <div className="relative max-w-lg mx-auto mb-8">
-                      <input
-                        ref={inputRef}
-                        type="text"
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && handleInitialSubmit(input)}
-                        placeholder="What's the occasion?"
-                        className="w-full px-6 py-4 pr-14 rounded-full border border-border bg-card text-foreground placeholder:text-muted-foreground text-base font-sans focus:outline-none focus:ring-2 focus:ring-foreground/20 transition-all"
-                      />
-                      <button
-                        onClick={() => handleInitialSubmit(input)}
-                        disabled={!input.trim()}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-foreground text-background hover:bg-foreground/80 transition-colors disabled:opacity-30"
-                      >
-                        <ArrowRight className="w-4 h-4" />
-                      </button>
-                    </div>
-
-                    {/* Example chips */}
-                    <div className="flex flex-wrap justify-center gap-2">
-                      {EXAMPLE_PROMPTS.map((prompt) => (
+                <AnimatePresence mode="wait">
+                  {inputMode === "occasion" ? (
+                    <motion.div
+                      key="occasion-mode"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      {/* Main Input */}
+                      <div className="relative max-w-lg mx-auto mb-8">
+                        <input
+                          ref={inputRef}
+                          type="text"
+                          value={input}
+                          onChange={(e) => setInput(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && handleInitialSubmit(input)}
+                          placeholder="What's the occasion?"
+                          className="w-full px-6 py-4 pr-14 rounded-full border border-border bg-card text-foreground placeholder:text-muted-foreground text-base font-sans focus:outline-none focus:ring-2 focus:ring-foreground/20 transition-all"
+                        />
                         <button
-                          key={prompt}
-                          onClick={() => handleInitialSubmit(prompt)}
-                          className="text-sm px-4 py-2 rounded-full border border-border text-muted-foreground hover:text-foreground hover:bg-secondary transition-all font-sans"
+                          onClick={() => handleInitialSubmit(input)}
+                          disabled={!input.trim()}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-foreground text-background hover:bg-foreground/80 transition-colors disabled:opacity-30"
                         >
-                          {prompt}
+                          <ArrowRight className="w-4 h-4" />
                         </button>
-                      ))}
-                    </div>
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="filter-mode"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.2 }}
-                    className="max-w-lg mx-auto text-left"
-                  >
-                    {/* Optional occasion text */}
-                    <div className="mb-4">
-                      <p className="text-sm font-medium text-foreground mb-2 font-sans">Occasion (optional)</p>
-                      <input
-                        type="text"
-                        value={selectedPrefs["occasion_text"] || ""}
-                        onChange={(e) => handlePrefSelect("occasion_text", e.target.value)}
-                        placeholder="e.g. Beach holiday, office party..."
-                        className="w-full px-4 py-3 rounded-full border border-border bg-card text-foreground placeholder:text-muted-foreground text-sm font-sans focus:outline-none focus:ring-2 focus:ring-foreground/20 transition-all"
+                      </div>
+
+                      {/* Randomized example chips */}
+                      <div className="flex flex-wrap justify-center gap-2">
+                        {randomPrompts.map((prompt) => (
+                          <button
+                            key={prompt}
+                            onClick={() => handleInitialSubmit(prompt)}
+                            className="text-sm px-4 py-2 rounded-full border border-border text-muted-foreground hover:text-foreground hover:bg-secondary transition-all font-sans"
+                          >
+                            {prompt}
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="filter-mode"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2 }}
+                      className="max-w-lg mx-auto text-left"
+                    >
+                      {/* Optional occasion text */}
+                      <div className="mb-4">
+                        <p className="text-sm font-medium text-foreground mb-2 font-sans">Occasion (optional)</p>
+                        <input
+                          type="text"
+                          value={selectedPrefs["occasion_text"] || ""}
+                          onChange={(e) => handlePrefSelect("occasion_text", e.target.value)}
+                          placeholder="e.g. Beach holiday, office party..."
+                          className="w-full px-4 py-3 rounded-full border border-border bg-card text-foreground placeholder:text-muted-foreground text-sm font-sans focus:outline-none focus:ring-2 focus:ring-foreground/20 transition-all"
+                        />
+                      </div>
+
+                      <FollowUpChips
+                        options={FOLLOW_UP_OPTIONS}
+                        onSelect={handlePrefSelect}
+                        selectedValues={selectedPrefs}
+                        currencySelector={<CurrencySelector value={currency} onChange={setCurrency} />}
                       />
-                    </div>
 
-                    <FollowUpChips
-                      options={FOLLOW_UP_OPTIONS}
-                      onSelect={handlePrefSelect}
-                      selectedValues={selectedPrefs}
-                      currencySelector={<CurrencySelector value={currency} onChange={setCurrency} />}
-                    />
-
-                    <div className="mt-6 flex justify-center">
-                      <motion.button
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.2 }}
-                        onClick={handleFilterSubmit}
-                        className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-foreground text-background font-sans text-sm font-medium hover:bg-foreground/80 transition-colors"
-                      >
-                        <span>Generate My Outfits</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </motion.button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
+                      <div className="mt-6 flex justify-center">
+                        <motion.button
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ delay: 0.2 }}
+                          onClick={handleFilterSubmit}
+                          className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-foreground text-background font-sans text-sm font-medium hover:bg-foreground/80 transition-colors"
+                        >
+                          <span>Generate My Outfits</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </motion.button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            </div>
           </motion.div>
         ) : (
           <motion.div
@@ -505,7 +560,7 @@ Rules:
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleChatFollowUp(input)}
-              placeholder={outfitsGenerated ? "Ask to refine, try different styles, or change anything..." : "Type a message..."}
+              placeholder={outfitsGenerated ? "Ask to refine, try different styles, or paste your own item data..." : "Type a message..."}
               disabled={isLoading}
               className="w-full px-5 py-3 pr-12 rounded-full border border-border bg-card text-foreground placeholder:text-muted-foreground text-sm font-sans focus:outline-none focus:ring-2 focus:ring-foreground/20 transition-all disabled:opacity-50"
             />
