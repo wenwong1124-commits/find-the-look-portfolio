@@ -97,11 +97,13 @@ export function useItemImage(
   color?: string,
   material?: string,
 ) {
-  const cacheKey = `${brand}-${itemDescription}-${category}`.toLowerCase().replace(/\s+/g, "-");
+  const cacheKey = `${brand}-${itemDescription}-${category}-${color || ""}-${material || ""}`
+    .toLowerCase()
+    .replace(/\s+/g, "-");
   const shouldSearch = IMAGE_WORTHY_CATEGORIES.has(category);
   const [imageUrl, setImageUrl] = useState<string | null>(memoryCache[cacheKey] || null);
   const [isLoading, setIsLoading] = useState(shouldSearch && !memoryCache[cacheKey]);
-  const fetchedRef = useRef(false);
+  const fetchedKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!shouldSearch) {
