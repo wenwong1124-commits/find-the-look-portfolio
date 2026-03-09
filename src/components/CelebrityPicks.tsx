@@ -66,10 +66,13 @@ export function CelebrityPicks({ onSelect, disabled }: CelebrityPicksProps) {
             <div className="bg-card p-3 pb-4 shadow-lg">
               {/* Avatar placeholder */}
               <div className="w-full aspect-[3/4] bg-muted flex items-center justify-center mb-3 relative overflow-hidden">
-                <span className="font-handwritten text-5xl text-muted-foreground/30">
-                  {celeb.initials}
-                </span>
-                <span className="absolute bottom-2 right-2 font-handwritten text-xs text-muted-foreground/50 rotate-3">
+                <img
+                  src={celeb.image}
+                  alt={`${celeb.name} style`}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+                <span className="absolute bottom-2 right-2 font-handwritten text-xs text-white/70 rotate-3 drop-shadow">
                   ♡
                 </span>
               </div>
