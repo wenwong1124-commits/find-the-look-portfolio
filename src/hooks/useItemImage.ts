@@ -1,15 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 const IMAGE_CACHE_KEY = "stylecapsule_image_cache_v2";
-const FUNC_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/search-product-image`;
+const BATCH_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/search-product-images`;
+const BATCH_DEBOUNCE_MS = 300;
 
 // In-memory cache
 const memoryCache: Record<string, string> = {};
-
-// Sequential queue with moderate delay (Firecrawl has higher rate limits than image gen)
-let requestQueue: Array<() => void> = [];
-let isProcessing = false;
-const DELAY_BETWEEN_REQUESTS = 2000; // 2s — Firecrawl is much faster than AI image gen
 
 // Only search images for core clothing — accessories use emojis
 const IMAGE_WORTHY_CATEGORIES = new Set(["top", "bottom", "shoes", "outerwear", "dress"]);
@@ -24,21 +20,10 @@ export function getItemEmoji(category: string): string {
   return categoryEmojis[category] || "👔";
 }
 
-function enqueueRequest(fn: () => void) {
-  requestQueue.push(fn);
-  processQueue();
-}
-
-function processQueue() {
-  if (isProcessing || requestQueue.length === 0) return;
-  isProcessing = true;
-  const next = requestQueue.shift()!;
-  next();
-  setTimeout(() => {
-    isProcessing = false;
-    processQueue();
-  }, DELAY_BETWEEN_REQUESTS);
-}
+// ── Batch collector ──
+type PendingItem = { key: string; query: string; resolve: (url: string | null) => void };
+let pendingBatch: PendingItem[] = [];
+let batchTimer: ReturnType<typeof setTimeout> | null = null;
 
 function loadDiskCache(): Record<string, string> {
   try {
@@ -48,31 +33,63 @@ function loadDiskCache(): Record<string, string> {
   return {};
 }
 
-function saveToDiskCache(key: string, url: string) {
+function saveToDiskCache(entries: Record<string, string>) {
   try {
     const cache = loadDiskCache();
-    cache[key] = url;
+    Object.assign(cache, entries);
     const keys = Object.keys(cache);
-    if (keys.length > 200) delete cache[keys[0]];
+    if (keys.length > 200) {
+      const toDelete = keys.slice(0, keys.length - 200);
+      toDelete.forEach((k) => delete cache[k]);
+    }
     localStorage.setItem(IMAGE_CACHE_KEY, JSON.stringify(cache));
   } catch {}
 }
 
-async function searchImage(query: string): Promise<string | null> {
+async function flushBatch() {
+  const batch = pendingBatch;
+  pendingBatch = [];
+  batchTimer = null;
+
+  if (batch.length === 0) return;
+
   try {
-    const res = await fetch(FUNC_URL, {
+    const res = await fetch(BATCH_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
       },
-      body: JSON.stringify({ query }),
+      body: JSON.stringify({
+        queries: batch.map((b) => ({ key: b.key, query: b.query })),
+      }),
     });
     const data = await res.json();
-    return data.imageUrl || null;
+    const results: Record<string, string> = data.results || {};
+
+    // Save all found images to disk cache at once
+    const toCache: Record<string, string> = {};
+    for (const item of batch) {
+      const url = results[item.key] || null;
+      if (url) {
+        memoryCache[item.key] = url;
+        toCache[item.key] = url;
+      }
+      item.resolve(url);
+    }
+    if (Object.keys(toCache).length > 0) saveToDiskCache(toCache);
   } catch {
-    return null;
+    // Resolve all with null on failure
+    batch.forEach((b) => b.resolve(null));
   }
+}
+
+function enqueueBatch(key: string, query: string): Promise<string | null> {
+  return new Promise((resolve) => {
+    pendingBatch.push({ key, query, resolve });
+    if (batchTimer) clearTimeout(batchTimer);
+    batchTimer = setTimeout(flushBatch, BATCH_DEBOUNCE_MS);
+  });
 }
 
 export function useItemImage(itemDescription: string, brand: string, category: string) {
@@ -107,13 +124,8 @@ export function useItemImage(itemDescription: string, brand: string, category: s
 
     const query = `${brand} ${itemDescription}`;
 
-    enqueueRequest(async () => {
-      const url = await searchImage(query);
-      if (url) {
-        memoryCache[cacheKey] = url;
-        saveToDiskCache(cacheKey, url);
-        setImageUrl(url);
-      }
+    enqueueBatch(cacheKey, query).then((url) => {
+      if (url) setImageUrl(url);
       setIsLoading(false);
     });
   }, [cacheKey, shouldSearch]);
