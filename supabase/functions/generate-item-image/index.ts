@@ -20,7 +20,7 @@ The item should look like a transparent PNG cutout — clean edges, flat-lay pro
 Professional e-commerce photography, centered composition.`;
 
     let response: Response | null = null;
-    for (let attempt = 0; attempt < 3; attempt++) {
+    for (let attempt = 0; attempt < 4; attempt++) {
       response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -34,8 +34,10 @@ Professional e-commerce photography, centered composition.`;
         }),
       });
 
-      if (response.status === 429 && attempt < 2) {
-        await new Promise((r) => setTimeout(r, 10000 * (attempt + 1)));
+      if (response.status === 429 && attempt < 3) {
+        const wait = 15000 * (attempt + 1);
+        console.log(`Rate limited (attempt ${attempt + 1}/4), waiting ${wait / 1000}s...`);
+        await new Promise((r) => setTimeout(r, wait));
         continue;
       }
       break;

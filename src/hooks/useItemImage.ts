@@ -60,10 +60,11 @@ async function fetchWithRetry(prompt: string, retries = 2): Promise<string | nul
       });
 
       if (res.status === 429) {
-        // Rate limited — wait longer then retry
         if (attempt < retries) {
-          await new Promise((r) => setTimeout(r, 12000 * (attempt + 1)));
+          await new Promise((r) => setTimeout(r, 20000 * (attempt + 1)));
           continue;
+        }
+        return null;
         }
         return null;
       }
