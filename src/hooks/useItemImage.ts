@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 
 const IMAGE_CACHE_KEY = "stylecapsule_image_cache_v3";
 const BATCH_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/search-product-images`;
-const BATCH_DEBOUNCE_MS = 250;
+const BATCH_DEBOUNCE_MS = 150;
 
 // In-memory cache
 const memoryCache: Record<string, string> = {};
@@ -97,11 +97,13 @@ export function useItemImage(
   color?: string,
   material?: string,
 ) {
-  const cacheKey = `${brand}-${itemDescription}-${category}`.toLowerCase().replace(/\s+/g, "-");
+  const cacheKey = `${brand}-${itemDescription}-${category}-${color || ""}-${material || ""}`
+    .toLowerCase()
+    .replace(/\s+/g, "-");
   const shouldSearch = IMAGE_WORTHY_CATEGORIES.has(category);
   const [imageUrl, setImageUrl] = useState<string | null>(memoryCache[cacheKey] || null);
   const [isLoading, setIsLoading] = useState(shouldSearch && !memoryCache[cacheKey]);
-  const fetchedRef = useRef(false);
+  const fetchedKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!shouldSearch) {
@@ -123,8 +125,8 @@ export function useItemImage(
       return;
     }
 
-    if (fetchedRef.current) return;
-    fetchedRef.current = true;
+    if (fetchedKeyRef.current === cacheKey) return;
+    fetchedKeyRef.current = cacheKey;
 
     // Build a rich query with color + material for style-accurate results
     const parts = [brand, itemDescription];
