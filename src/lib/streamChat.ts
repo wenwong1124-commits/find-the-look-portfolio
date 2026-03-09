@@ -1,13 +1,15 @@
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/style-advisor`;
 
-export type Msg = { role: "user" | "assistant" | "system"; content: string };
+export type Msg = { role: "user" | "assistant" | "system"; content: string | Array<{ type: string; text?: string; image_url?: { url: string } }> };
 
 export async function streamChat({
   messages,
+  imageUrl,
   onDelta,
   onDone,
 }: {
   messages: Msg[];
+  imageUrl?: string;
   onDelta: (deltaText: string) => void;
   onDone: () => void;
 }) {
@@ -21,7 +23,7 @@ export async function streamChat({
         "Content-Type": "application/json",
         Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
       },
-      body: JSON.stringify({ messages }),
+      body: JSON.stringify({ messages, imageUrl }),
     });
 
     if (resp.status === 429) {
