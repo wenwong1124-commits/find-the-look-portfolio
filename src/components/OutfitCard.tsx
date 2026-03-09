@@ -49,7 +49,7 @@ function ItemImage({ item, index }: { item: OutfitItem; index: number }) {
   );
 }
 
-export function OutfitCard({ outfit, isSaved, onToggleSave, index }: OutfitCardProps) {
+export function OutfitCard({ outfit, isSaved, onToggleSave, index, feedback, onFeedback }: OutfitCardProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
