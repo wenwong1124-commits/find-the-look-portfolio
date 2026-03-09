@@ -14,12 +14,27 @@ import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 
 const SCRAPBOOK_IMAGES = [
-  { src: "/images/scrapbook-1.jpg", className: "top-[5%] left-[2%] w-28 sm:w-36 -rotate-6" },
-  { src: "/images/scrapbook-2.jpg", className: "top-[8%] right-[3%] w-24 sm:w-32 rotate-3" },
-  { src: "/images/scrapbook-3.jpg", className: "top-[35%] left-[5%] w-20 sm:w-28 rotate-[8deg]" },
-  { src: "/images/scrapbook-4.jpg", className: "bottom-[20%] right-[4%] w-26 sm:w-34 -rotate-[5deg]" },
-  { src: "/images/scrapbook-5.jpg", className: "bottom-[8%] left-[8%] w-22 sm:w-30 rotate-[4deg]" },
-  { src: "/images/scrapbook-6.jpg", className: "top-[55%] right-[8%] w-20 sm:w-26 -rotate-[3deg]" },
+  { src: "/images/scrapbook-1.jpg", style: { top: "6%", left: "3%", width: "180px", transform: "rotate(-8deg)" } },
+  { src: "/images/scrapbook-2.jpg", style: { top: "4%", right: "5%", width: "160px", transform: "rotate(5deg)" } },
+  { src: "/images/scrapbook-3.jpg", style: { top: "38%", left: "2%", width: "150px", transform: "rotate(10deg)" } },
+  { src: "/images/scrapbook-4.jpg", style: { bottom: "18%", right: "3%", width: "170px", transform: "rotate(-4deg)" } },
+  { src: "/images/scrapbook-5.jpg", style: { bottom: "5%", left: "6%", width: "140px", transform: "rotate(6deg)" } },
+  { src: "/images/scrapbook-6.jpg", style: { top: "58%", right: "6%", width: "130px", transform: "rotate(-6deg)" } },
+];
+
+const HANDWRITTEN_LABELS = [
+  { text: "feel alive ✦", style: { top: "12%", left: "22%", transform: "rotate(-12deg)", fontSize: "1.4rem" } },
+  { text: "chic street →", style: { top: "18%", right: "20%", transform: "rotate(6deg)", fontSize: "1.2rem" } },
+  { text: "city jam ♡", style: { bottom: "28%", left: "15%", transform: "rotate(-5deg)", fontSize: "1.1rem" } },
+  { text: "inspo!", style: { top: "50%", right: "18%", transform: "rotate(8deg)", fontSize: "1.5rem" } },
+  { text: "mood board ★", style: { bottom: "12%", right: "22%", transform: "rotate(-3deg)", fontSize: "1rem" } },
+];
+
+const TAPE_DECORATIONS = [
+  { style: { top: "8%", left: "12%", transform: "rotate(-20deg)", width: "50px", height: "14px" }, color: "tape-pink" },
+  { style: { top: "10%", right: "18%", transform: "rotate(15deg)", width: "45px", height: "12px" }, color: "tape-green" },
+  { style: { bottom: "22%", left: "8%", transform: "rotate(-30deg)", width: "55px", height: "14px" }, color: "tape-blue" },
+  { style: { top: "45%", right: "4%", transform: "rotate(25deg)", width: "40px", height: "12px" }, color: "" },
 ];
 
 const TONE_LABELS: Record<number, string> = {
@@ -45,7 +60,6 @@ export default function Index() {
   const [isLoading, setIsLoading] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
 
-  // Upload flow state
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [budget, setBudget] = useState("$200–$500");
   const [tone, setTone] = useState(3);
@@ -93,7 +107,6 @@ export default function Index() {
     const currencySymbol = getCurrencySymbol(currency);
     const toneDesc = TONE_LABELS[tone];
 
-    // Add user entry with image preview
     setChatEntries([
       {
         id: crypto.randomUUID(),
@@ -309,44 +322,82 @@ Rules:
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, y: -20 }}
-            className="relative min-h-screen overflow-hidden"
+            className="relative min-h-screen overflow-hidden scrapbook-bg"
           >
-            {/* Scrapbook fashion images */}
+            {/* Scrapbook fashion images with tape */}
             <div className="absolute inset-0 pointer-events-none z-0 hidden sm:block">
               {SCRAPBOOK_IMAGES.map((img, i) => (
                 <motion.div
                   key={i}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 0.3, scale: 1 }}
-                  transition={{ duration: 0.8, delay: 0.15 * i }}
-                  className={`absolute ${img.className}`}
+                  initial={{ opacity: 0, scale: 0.85, rotate: 0 }}
+                  animate={{ opacity: 0.85, scale: 1 }}
+                  transition={{ duration: 0.7, delay: 0.12 * i }}
+                  className="absolute"
+                  style={img.style}
                 >
+                  {/* Tape on top */}
+                  <div
+                    className={`tape ${TAPE_DECORATIONS[i % TAPE_DECORATIONS.length]?.color || ""}`}
+                    style={{
+                      top: "-6px",
+                      left: "30%",
+                      transform: `rotate(${-20 + i * 12}deg)`,
+                      width: "48px",
+                      height: "13px",
+                    }}
+                  />
                   <img
                     src={img.src}
                     alt=""
-                    className="rounded-lg shadow-lg object-cover w-full aspect-[3/4]"
+                    className="w-full aspect-[3/4] object-cover border-[3px] border-card/80 shadow-lg"
                   />
                 </motion.div>
+              ))}
+
+              {/* Handwritten labels */}
+              {HANDWRITTEN_LABELS.map((label, i) => (
+                <motion.span
+                  key={`label-${i}`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 0.7 }}
+                  transition={{ duration: 0.6, delay: 0.8 + i * 0.15 }}
+                  className="absolute font-handwritten text-card/60 pointer-events-none select-none"
+                  style={label.style}
+                >
+                  {label.text}
+                </motion.span>
+              ))}
+
+              {/* Extra tape decorations */}
+              {TAPE_DECORATIONS.map((tape, i) => (
+                <div
+                  key={`tape-${i}`}
+                  className={`tape ${tape.color} absolute`}
+                  style={tape.style}
+                />
               ))}
             </div>
 
             {/* Content */}
-            <div className="relative z-10 flex flex-col items-center pt-28 sm:pt-32 pb-16 px-6">
+            <div className="relative z-10 flex flex-col items-center pt-28 sm:pt-36 pb-16 px-6">
               <motion.div
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8 }}
                 className="text-center max-w-2xl w-full"
               >
-                <h1 className="text-5xl sm:text-7xl font-light tracking-[0.25em] text-foreground mb-4 uppercase" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
+                <h1 className="text-5xl sm:text-7xl tracking-[0.2em] text-card mb-2 uppercase" style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 300 }}>
                   REMAKE
-                  <span className="block text-accent font-normal">THE LOOK</span>
                 </h1>
-                <p className="text-muted-foreground text-lg font-sans mb-10 max-w-md mx-auto leading-relaxed">
-                  Upload a photo of any outfit you love — from Instagram, Pinterest, or a celebrity look — and we'll help you recreate it within your budget.
+                <span className="font-handwritten text-4xl sm:text-6xl text-card/80 block mb-1" style={{ transform: "rotate(-2deg)" }}>
+                  the look
+                </span>
+                <div className="w-24 h-[2px] bg-card/30 mx-auto mb-6" />
+                <p className="text-card/60 text-base font-sans mb-10 max-w-sm mx-auto leading-relaxed">
+                  Upload a photo of any outfit you love — from Instagram, Pinterest, or a celebrity look — and we'll help you recreate it.
                 </p>
 
-                {/* Upload zone */}
+                {/* Upload zone — styled as a polaroid */}
                 <AnimatePresence mode="wait">
                   {!uploadedImage ? (
                     <motion.div
@@ -354,26 +405,37 @@ Rules:
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95 }}
-                      className="max-w-sm mx-auto mb-8"
+                      className="max-w-xs mx-auto mb-8"
+                      style={{ transform: "rotate(1.5deg)" }}
                     >
                       <div
                         onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                         onDragLeave={() => setIsDragging(false)}
                         onDrop={handleDrop}
                         onClick={() => fileInputRef.current?.click()}
-                        className={`border-2 border-dashed rounded-lg p-10 cursor-pointer transition-all ${
-                          isDragging
-                            ? "border-foreground bg-secondary/50"
-                            : "border-border hover:border-foreground/50 hover:bg-secondary/30"
+                        className={`relative bg-card p-3 pb-10 shadow-xl cursor-pointer transition-all ${
+                          isDragging ? "shadow-2xl scale-[1.02]" : "hover:shadow-2xl hover:scale-[1.01]"
                         }`}
                       >
-                        <div className="flex flex-col items-center gap-3 text-muted-foreground">
-                          <ImagePlus className="w-10 h-10" />
-                          <div>
-                            <p className="text-sm font-sans font-medium text-foreground">Drop your inspo here</p>
-                            <p className="text-xs font-sans mt-1">or click to browse</p>
+                        {/* Tape on polaroid */}
+                        <div className="tape tape-pink absolute -top-2 left-1/2 -translate-x-1/2" style={{ transform: "rotate(-8deg) translateX(-50%)", width: "60px", height: "14px" }} />
+
+                        <div className={`border-2 border-dashed p-10 transition-colors ${
+                          isDragging ? "border-foreground/40 bg-secondary/30" : "border-border/60"
+                        }`}>
+                          <div className="flex flex-col items-center gap-3 text-muted-foreground">
+                            <ImagePlus className="w-10 h-10" />
+                            <div>
+                              <p className="text-sm font-sans font-medium text-foreground">Drop your inspo here</p>
+                              <p className="text-xs font-sans mt-1 text-muted-foreground">or click to browse</p>
+                            </div>
                           </div>
                         </div>
+
+                        {/* Handwritten note on polaroid */}
+                        <p className="font-handwritten text-base text-muted-foreground text-center mt-3" style={{ transform: "rotate(-1deg)" }}>
+                          paste your inspo ♡
+                        </p>
                       </div>
                       <input
                         ref={fileInputRef}
@@ -393,34 +455,41 @@ Rules:
                       animate={{ opacity: 1, y: 0 }}
                       className="max-w-md mx-auto space-y-6 mb-8"
                     >
-                      {/* Image preview */}
-                      <div className="relative inline-block">
-                        <img
-                          src={uploadedImage}
-                          alt="Uploaded look"
-                          className="w-48 h-64 object-cover rounded-lg border border-border mx-auto"
-                        />
+                      {/* Polaroid preview */}
+                      <div className="relative inline-block" style={{ transform: "rotate(-2deg)" }}>
+                        <div className="bg-card p-2 pb-8 shadow-xl relative">
+                          {/* Tape */}
+                          <div className="tape tape-green absolute -top-2 left-1/3" style={{ transform: "rotate(12deg)", width: "50px", height: "13px" }} />
+                          <img
+                            src={uploadedImage}
+                            alt="Uploaded look"
+                            className="w-48 h-64 object-cover"
+                          />
+                          <p className="font-handwritten text-sm text-muted-foreground text-center mt-2">your inspo ✦</p>
+                        </div>
                         <button
                           onClick={() => setUploadedImage(null)}
-                          className="absolute -top-2 -right-2 p-1 rounded-full bg-foreground text-background hover:bg-foreground/80 transition-colors"
+                          className="absolute -top-3 -right-3 p-1.5 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/80 transition-colors shadow-md"
                         >
                           <X className="w-3 h-3" />
                         </button>
                       </div>
 
-                      {/* Style controls */}
-                      <StyleAdjuster
-                        budget={budget}
-                        onBudgetChange={setBudget}
-                        tone={tone}
-                        onToneChange={setTone}
-                        gender={gender}
-                        onGenderChange={setGender}
-                        currency={currency}
-                        onCurrencyChange={setCurrency}
-                        onSubmit={handleFindMyLook}
-                        isLoading={isLoading}
-                      />
+                      {/* Style controls — on a "paper" surface */}
+                      <div className="bg-card/90 backdrop-blur-sm p-5 torn-edge">
+                        <StyleAdjuster
+                          budget={budget}
+                          onBudgetChange={setBudget}
+                          tone={tone}
+                          onToneChange={setTone}
+                          gender={gender}
+                          onGenderChange={setGender}
+                          currency={currency}
+                          onCurrencyChange={setCurrency}
+                          onSubmit={handleFindMyLook}
+                          isLoading={isLoading}
+                        />
+                      </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -445,11 +514,16 @@ Rules:
                   {entry.role === "user" ? (
                     <div className="flex flex-col items-end gap-2 max-w-md">
                       {entry.imagePreview && (
-                        <img
-                          src={entry.imagePreview}
-                          alt="Your inspo"
-                          className="w-32 h-40 object-cover rounded-lg border border-border"
-                        />
+                        <div className="relative" style={{ transform: "rotate(2deg)" }}>
+                          <div className="bg-card p-1.5 pb-6 shadow-md">
+                            <img
+                              src={entry.imagePreview}
+                              alt="Your inspo"
+                              className="w-32 h-40 object-cover"
+                            />
+                            <p className="font-handwritten text-xs text-muted-foreground text-center mt-1">my inspo ♡</p>
+                          </div>
+                        </div>
                       )}
                       <div className="bg-foreground text-background px-5 py-3 rounded-2xl rounded-br-sm font-sans text-sm">
                         {entry.content}

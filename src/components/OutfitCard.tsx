@@ -3,6 +3,7 @@ import { Heart, ExternalLink, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useItemImage } from "@/hooks/useItemImage";
+import { ScrapbookOutfitView } from "@/components/ScrapbookOutfitView";
 
 interface OutfitCardProps {
   outfit: CapsuleOutfit;
@@ -72,6 +73,9 @@ export function OutfitCard({ outfit, isSaved, onToggleSave, index }: OutfitCardP
       transition={{ duration: 0.5, delay: index * 0.12 }}
       className="border border-border rounded-lg overflow-hidden bg-card flex flex-col"
     >
+      {/* Scrapbook overview */}
+      <ScrapbookOutfitView items={outfit.items} outfitName={outfit.name} />
+
       {/* Header: title, occasion, save */}
       <div className="flex items-start justify-between px-4 py-3 border-b border-border">
         <div className="min-w-0 flex-1">
