@@ -1,47 +1,17 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, ArrowRight } from "lucide-react";
+import { Send, Upload, ImagePlus, X } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { OutfitCard } from "@/components/OutfitCard";
-import { FollowUpChips } from "@/components/FollowUpChips";
+import { StyleAdjuster } from "@/components/StyleAdjuster";
 import { ThinkingIndicator } from "@/components/ThinkingIndicator";
-import { CurrencySelector, getCurrencySymbol } from "@/components/CurrencySelector";
+import { getCurrencySymbol } from "@/components/CurrencySelector";
 import { useSavedOutfits } from "@/hooks/useSavedOutfits";
 import { streamChat, Msg } from "@/lib/streamChat";
-import { parseOutfitsFromText, hasOutfitData } from "@/lib/parseOutfits";
-import { CapsuleOutfit, FollowUpOption } from "@/types/outfit";
+import { parseOutfitsFromText } from "@/lib/parseOutfits";
+import { CapsuleOutfit } from "@/types/outfit";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
-
-const ALL_PROMPTS = [
-  "Weekend trip to Japan 🇯🇵",
-  "Summer wedding guest 💒",
-  "First day at a new job 💼",
-  "Casual brunch date ☕",
-  "Music festival weekend 🎵",
-  "Art gallery opening 🎨",
-  "Rooftop cocktails 🍸",
-  "Ski trip to Aspen ⛷️",
-  "Coachella weekend 🌵",
-  "Board meeting 📊",
-  "Yacht party ⛵",
-  "Graduation ceremony 🎓",
-  "Beach holiday in Bali 🏖️",
-  "Paris fashion week 🗼",
-  "Date night dinner 🕯️",
-  "Hiking in Patagonia 🏔️",
-  "Holiday office party 🎄",
-  "Tropical honeymoon 🌺",
-  "Street style in Seoul 🇰🇷",
-  "Vineyard tour in Tuscany 🍷",
-  "New Year's Eve gala 🥂",
-  "London theatre evening 🎭",
-];
-
-function pickRandom<T>(arr: T[], count: number): T[] {
-  const shuffled = [...arr].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, count);
-}
 
 const SCRAPBOOK_IMAGES = [
   { src: "/images/scrapbook-1.jpg", className: "top-[5%] left-[2%] w-28 sm:w-36 -rotate-6" },
@@ -52,24 +22,21 @@ const SCRAPBOOK_IMAGES = [
   { src: "/images/scrapbook-6.jpg", className: "top-[55%] right-[8%] w-20 sm:w-26 -rotate-[3deg]" },
 ];
 
-const FOLLOW_UP_OPTIONS: FollowUpOption[] = [
-  { label: "Who are you going with?", category: "companion", options: ["Solo", "Partner", "Friends", "Family", "Colleagues", "Business Associates"] },
-  { label: "What's your budget range?", category: "budget", options: ["Under $500", "$500–$1,500", "$1,500–$3,000", "$3,000+"] },
-  { label: "How many days?", category: "days", options: ["1 day", "2–3 days", "4–5 days", "A week+"] },
-  { label: "What season or month?", category: "season", options: ["Spring", "Summer", "Autumn", "Winter"] },
-  { label: "What style do you prefer?", category: "style", options: ["Casual", "Smart Casual", "Formal", "Edgy", "Classic", "Streetwear"] },
-];
+const TONE_LABELS: Record<number, string> = {
+  1: "way more casual",
+  2: "toned down",
+  3: "similar style",
+  4: "elevated",
+  5: "full glam / luxury",
+};
 
 interface ChatEntry {
   id: string;
   role: "user" | "assistant";
   content: string;
   outfits?: CapsuleOutfit[];
-  isThinking?: boolean;
-  showFollowUp?: boolean;
+  imagePreview?: string;
 }
-
-type InputMode = "occasion" | "filters";
 
 export default function Index() {
   const [input, setInput] = useState("");
@@ -77,113 +44,96 @@ export default function Index() {
   const [conversationHistory, setConversationHistory] = useState<Msg[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
-  const [selectedPrefs, setSelectedPrefs] = useState<Record<string, string>>({});
-  const [showFollowUp, setShowFollowUp] = useState(false);
-  const [initialOccasion, setInitialOccasion] = useState("");
-  const [currency, setCurrency] = useState("HKD");
-  const [gender, setGender] = useState<"women" | "men" | "unisex">("women");
-  const [inputMode, setInputMode] = useState<InputMode>("occasion");
-  const [outfitsGenerated, setOutfitsGenerated] = useState(false);
-  const chatEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const followUpInputRef = useRef<HTMLInputElement>(null);
-  const { savedOutfits, saveOutfit, removeOutfit, isOutfitSaved } = useSavedOutfits();
 
-  const randomPrompts = useMemo(() => pickRandom(ALL_PROMPTS, 5), []);
+  // Upload flow state
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [budget, setBudget] = useState("$200–$500");
+  const [tone, setTone] = useState(3);
+  const [gender, setGender] = useState<"women" | "men" | "unisex">("women");
+  const [currency, setCurrency] = useState("HKD");
+  const [outfitsGenerated, setOutfitsGenerated] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const followUpInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { savedOutfits, saveOutfit, removeOutfit, isOutfitSaved } = useSavedOutfits();
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatEntries, isLoading]);
 
-  const handleInitialSubmit = (text: string) => {
-    if (!text.trim()) return;
-    setHasStarted(true);
-    setInitialOccasion(text.trim());
-    setChatEntries([{ id: crypto.randomUUID(), role: "user", content: text.trim() }]);
-    setInput("");
-    setShowFollowUp(true);
-
-    setTimeout(() => {
-      setChatEntries((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content: "Great choice! Let me know a bit more so I can curate the perfect capsule wardrobe for you:",
-          showFollowUp: true,
-        },
-      ]);
-    }, 500);
-  };
-
-  const handleFilterSubmit = () => {
-    const occasion = selectedPrefs["occasion_text"] || "General occasion";
-    setHasStarted(true);
-    setInitialOccasion(occasion);
-
-    const prefsText = Object.entries(selectedPrefs)
-      .filter(([k]) => k !== "occasion_text")
-      .map(([k, v]) => `${k}: ${v}`)
-      .join(", ");
-
-    setChatEntries([
-      { id: crypto.randomUUID(), role: "user", content: prefsText ? `My preferences: ${prefsText}` : "Generate outfits for me!" },
-    ]);
-
-    setShowFollowUp(false);
-    handleGenerateOutfits(occasion, selectedPrefs);
-  };
-
-  const handlePrefSelect = (category: string, value: string) => {
-    setSelectedPrefs((prev) => ({ ...prev, [category]: value }));
-  };
-
-  const handleGenerateOutfits = async (occasion?: string, prefs?: Record<string, string>, followUpText?: string) => {
-    setShowFollowUp(false);
-
-    const occ = occasion || initialOccasion;
-    const p = prefs || selectedPrefs;
-    const currencySymbol = getCurrencySymbol(currency);
-
-    const fullPrompt = followUpText
-      ? followUpText
-      : (() => {
-          const prefsText = Object.entries(p)
-            .filter(([k]) => k !== "occasion_text")
-            .map(([k, v]) => `${k}: ${v}`)
-            .join(", ");
-          return `Occasion: ${occ}. Gender: ${gender}. ${prefsText ? `Preferences: ${prefsText}.` : ""} Please generate 3 capsule outfit sets. Use ${currency} (${currencySymbol}) for all prices.`;
-        })();
-
-    if (!followUpText && !occasion) {
-      const prefsText = Object.entries(p)
-        .filter(([k]) => k !== "occasion_text")
-        .map(([k, v]) => `${k}: ${v}`)
-        .join(", ");
-      setChatEntries((prev) => [
-        ...prev,
-        { id: crypto.randomUUID(), role: "user", content: prefsText ? `My preferences: ${prefsText}` : "Generate outfits for me!" },
-      ]);
+  const handleFileSelect = useCallback((file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload an image file.");
+      return;
     }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Image too large. Max 10MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setUploadedImage(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFileSelect(file);
+  }, [handleFileSelect]);
+
+  const handleFindMyLook = async () => {
+    if (!uploadedImage) return;
+
+    setHasStarted(true);
+    const currencySymbol = getCurrencySymbol(currency);
+    const toneDesc = TONE_LABELS[tone];
+
+    // Add user entry with image preview
+    setChatEntries([
+      {
+        id: crypto.randomUUID(),
+        role: "user",
+        content: `Remake this look — ${toneDesc}, budget ${budget}, ${gender}'s fashion in ${currency}`,
+        imagePreview: uploadedImage,
+      },
+    ]);
 
     setIsLoading(true);
 
-    const systemPrompt = `You are StyleCapsule, an expert AI fashion stylist. The user wants outfit recommendations.
+    const systemPrompt = `You are StyleCapsule, an expert AI fashion stylist specializing in recreating looks.
 
-If the user provides specific item data (brands, prices, URLs, product details), use those EXACT items in the outfit recommendations instead of generating new ones. Incorporate user-provided items faithfully.
+The user has uploaded a photo of a look they want to recreate. Your job:
+1. First, briefly describe what you see in the image — the outfit, style, key pieces, colors, and overall vibe (2-3 sentences).
+2. Then generate 3 outfit sets that recreate this look within the user's preferences.
 
-When the user ASKS FOR NEW OUTFITS or this is the first request, return your response in TWO parts:
-1. A brief, warm introduction (2-3 sentences) about why these outfits work for their occasion.
-2. A JSON block with the outfit data in this EXACT format:
+User preferences:
+- Gender: ${gender}
+- Budget: ${budget} total per outfit
+- Style tone: ${toneDesc} (1=very casual, 3=keep it similar, 5=full glam)
+- Currency: ${currency} (${currencySymbol})
+
+Tone guidance:
+- If tone is 1-2: substitute luxury pieces with affordable casual alternatives, use brands like Zara, H&M, Uniqlo, ASOS
+- If tone is 3: recreate the look as closely as possible at the given budget
+- If tone is 4-5: elevate the look with premium brands, better fabrics, more polished silhouettes
+
+Return your response in TWO parts:
+1. A brief analysis of the look in the image + why your recreations work.
+2. A JSON block with outfit data:
 
 \`\`\`json
 [
   {
     "id": "unique-id",
     "name": "Outfit Name",
-    "explanation": "2-3 sentences explaining WHY this outfit works for the occasion — color harmony, silhouette balance, vibe match, etc.",
-    "stylingTips": ["Actionable styling tip 1", "Actionable styling tip 2", "Actionable styling tip 3"],
-    "occasion": "${occ}",
+    "explanation": "Why this outfit recreates the look — color harmony, silhouette, vibe match.",
+    "stylingTips": ["Tip 1", "Tip 2", "Tip 3"],
+    "occasion": "Inspired look",
     "items": [
       {
         "name": "Item Name",
@@ -195,44 +145,36 @@ When the user ASKS FOR NEW OUTFITS or this is the first request, return your res
         "category": "top|bottom|shoes|bag|accessory|outerwear|dress",
         "sizes": ["XS","S","M","L","XL"],
         "shopUrl": "https://brand-website.com/product",
-        "imageDescription": "Brief description of the item"
+        "imageDescription": "Brief description of the item for image generation"
       }
     ]
   }
 ]
 \`\`\`
 
-When the user asks follow-up questions, feedback, or wants to refine:
-- If they want different outfits or modifications, generate new outfit JSON blocks
-- If they ask general styling questions, answer conversationally without JSON
-- Always end your response by asking if they'd like to adjust anything or try different styles
-
 Rules:
-- The user's gender preference is: ${gender}. Generate outfits appropriate for ${gender === "unisex" ? "any gender" : gender}'s fashion
-- Generate exactly 3 capsule outfit sets when providing outfits
-- Each outfit must have at least: top, bottom, shoes, bag, and 1 accessory
-- Use REAL fashion brands and realistic prices matching the user's budget in ${currency}
-- shopUrl should link to the actual brand's website (e.g., https://www.zara.com, https://www.cos.com)
+- Generate exactly 3 outfit sets
+- Each outfit: top, bottom, shoes, bag, 1+ accessory (or dress + shoes + bag + accessory)
+- Use REAL fashion brands and realistic prices in ${currency}
+- shopUrl should link to real brand websites
 - Mix brands across outfits for variety
-- Adapt to the season, occasion, and style preferences
-- Keep explanations concise and inspiring
-- Each outfit MUST have an "explanation" (why it works) and "stylingTips" (3 actionable tips like "Tuck the shirt in for a polished look" or "Roll the sleeves for a relaxed vibe")
-- ALL prices must be in ${currency} (${currencySymbol})
-- After showing outfits, ask if they're happy or want changes (e.g. "Want me to make it more casual?" or "Should I try different brands?")`;
+- After showing outfits, ask if they want changes`;
+
+    const userMessage = `Please analyze this look and create 3 outfit recreations. Style tone: ${toneDesc}. Budget: ${budget} per outfit. Gender: ${gender}. Currency: ${currency}.`;
 
     const messages: Msg[] = [
       { role: "system", content: systemPrompt },
-      ...conversationHistory,
-      { role: "user", content: fullPrompt },
+      { role: "user", content: userMessage },
     ];
 
-    setConversationHistory((prev) => [...prev, { role: "user", content: fullPrompt }]);
+    setConversationHistory([{ role: "user", content: userMessage }]);
 
     let assistantText = "";
 
     try {
       await streamChat({
         messages,
+        imageUrl: uploadedImage,
         onDelta: (chunk) => {
           assistantText += chunk;
           const displayText = assistantText
@@ -241,7 +183,7 @@ Rules:
             .trim();
           setChatEntries((prev) => {
             const last = prev[prev.length - 1];
-            if (last?.role === "assistant" && !last.showFollowUp) {
+            if (last?.role === "assistant") {
               return prev.map((e, i) =>
                 i === prev.length - 1 ? { ...e, content: displayText } : e
               );
@@ -256,7 +198,7 @@ Rules:
               const newEntries = [...prev];
               let lastAssistant = -1;
               for (let i = newEntries.length - 1; i >= 0; i--) {
-                if (newEntries[i].role === "assistant" && !newEntries[i].showFollowUp) { lastAssistant = i; break; }
+                if (newEntries[i].role === "assistant") { lastAssistant = i; break; }
               }
               if (lastAssistant >= 0) {
                 const cleanText = assistantText.replace(/```json[\s\S]*?```/, "").trim();
@@ -285,11 +227,75 @@ Rules:
       { id: crypto.randomUUID(), role: "user", content: text.trim() },
     ]);
 
-    handleGenerateOutfits(initialOccasion, selectedPrefs, text.trim());
-  };
+    setIsLoading(true);
+    const currencySymbol = getCurrencySymbol(currency);
 
-  const handleFollowUpSubmit = () => {
-    handleGenerateOutfits();
+    const systemPrompt = `You are StyleCapsule, an expert AI fashion stylist. The user previously uploaded a look they want to recreate and you suggested outfits. Now they want refinements.
+
+If they ask for different outfits or modifications, generate new outfit JSON blocks in the same format.
+If they ask general styling questions, answer conversationally without JSON.
+Always end by asking if they'd like to adjust anything.
+
+Rules:
+- Gender: ${gender}
+- Budget: ${budget}
+- Currency: ${currency} (${currencySymbol})
+- Use REAL brands and realistic prices
+- Format outfits in \`\`\`json blocks with the same schema as before`;
+
+    const messages: Msg[] = [
+      { role: "system", content: systemPrompt },
+      ...conversationHistory,
+      { role: "user", content: text.trim() },
+    ];
+
+    setConversationHistory((prev) => [...prev, { role: "user", content: text.trim() }]);
+
+    let assistantText = "";
+
+    try {
+      await streamChat({
+        messages,
+        onDelta: (chunk) => {
+          assistantText += chunk;
+          const displayText = assistantText
+            .replace(/```json[\s\S]*?```/g, "")
+            .replace(/```json[\s\S]*$/g, "")
+            .trim();
+          setChatEntries((prev) => {
+            const last = prev[prev.length - 1];
+            if (last?.role === "assistant") {
+              return prev.map((e, i) =>
+                i === prev.length - 1 ? { ...e, content: displayText } : e
+              );
+            }
+            return [...prev, { id: crypto.randomUUID(), role: "assistant", content: displayText }];
+          });
+        },
+        onDone: () => {
+          const outfits = parseOutfitsFromText(assistantText);
+          if (outfits.length > 0) {
+            setChatEntries((prev) => {
+              const newEntries = [...prev];
+              let lastAssistant = -1;
+              for (let i = newEntries.length - 1; i >= 0; i--) {
+                if (newEntries[i].role === "assistant") { lastAssistant = i; break; }
+              }
+              if (lastAssistant >= 0) {
+                const cleanText = assistantText.replace(/```json[\s\S]*?```/, "").trim();
+                newEntries[lastAssistant] = { ...newEntries[lastAssistant], content: cleanText, outfits };
+              }
+              return newEntries;
+            });
+          }
+          setConversationHistory((prev) => [...prev, { role: "assistant", content: assistantText }]);
+          setIsLoading(false);
+        },
+      });
+    } catch (e: any) {
+      toast.error(e.message || "Something went wrong. Please try again.");
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -311,7 +317,7 @@ Rules:
                 <motion.div
                   key={i}
                   initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 0.35, scale: 1 }}
+                  animate={{ opacity: 0.3, scale: 1 }}
                   transition={{ duration: 0.8, delay: 0.15 * i }}
                   className={`absolute ${img.className}`}
                 >
@@ -333,140 +339,88 @@ Rules:
                 className="text-center max-w-2xl w-full"
               >
                 <h1 className="text-5xl sm:text-7xl font-light tracking-[0.25em] text-foreground mb-4 uppercase" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
-                  STYLE
-                  <span className="block text-accent font-normal">CAPSULE</span>
+                  REMAKE
+                  <span className="block text-accent font-normal">THE LOOK</span>
                 </h1>
-                <p className="text-muted-foreground text-lg font-sans mb-8 max-w-md mx-auto leading-relaxed">
-                  Your AI-powered personal stylist. Tell us the occasion, and we'll curate the perfect capsule wardrobe for you.
+                <p className="text-muted-foreground text-lg font-sans mb-10 max-w-md mx-auto leading-relaxed">
+                  Upload a photo of any outfit you love — from Instagram, Pinterest, or a celebrity look — and we'll help you recreate it within your budget.
                 </p>
 
-                {/* Gender toggle */}
-                <div className="flex justify-center mb-4">
-                  <div className="inline-flex rounded-full border border-border bg-card p-1">
-                    {(["women", "men", "unisex"] as const).map((g) => (
-                      <button
-                        key={g}
-                        onClick={() => setGender(g)}
-                        className={`text-sm px-5 py-2 rounded-full font-sans transition-all capitalize ${
-                          gender === g
-                            ? "bg-foreground text-background"
-                            : "text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        {g}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Mode toggle */}
-                <div className="flex justify-center mb-8">
-                  <div className="inline-flex rounded-full border border-border bg-card p-1">
-                    <button
-                      onClick={() => setInputMode("occasion")}
-                      className={`text-sm px-5 py-2 rounded-full font-sans transition-all ${
-                        inputMode === "occasion"
-                          ? "bg-foreground text-background"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      By Occasion
-                    </button>
-                    <button
-                      onClick={() => setInputMode("filters")}
-                      className={`text-sm px-5 py-2 rounded-full font-sans transition-all ${
-                        inputMode === "filters"
-                          ? "bg-foreground text-background"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      By Filters
-                    </button>
-                  </div>
-                </div>
-
+                {/* Upload zone */}
                 <AnimatePresence mode="wait">
-                  {inputMode === "occasion" ? (
+                  {!uploadedImage ? (
                     <motion.div
-                      key="occasion-mode"
+                      key="upload-zone"
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      className="max-w-sm mx-auto mb-8"
                     >
-                      {/* Main Input */}
-                      <div className="relative max-w-lg mx-auto mb-8">
-                        <input
-                          ref={inputRef}
-                          type="text"
-                          value={input}
-                          onChange={(e) => setInput(e.target.value)}
-                          onKeyDown={(e) => e.key === "Enter" && handleInitialSubmit(input)}
-                          placeholder="What's the occasion?"
-                          className="w-full px-6 py-4 pr-14 rounded-full border border-border bg-card text-foreground placeholder:text-muted-foreground text-base font-sans focus:outline-none focus:ring-2 focus:ring-foreground/20 transition-all"
-                        />
-                        <button
-                          onClick={() => handleInitialSubmit(input)}
-                          disabled={!input.trim()}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-foreground text-background hover:bg-foreground/80 transition-colors disabled:opacity-30"
-                        >
-                          <ArrowRight className="w-4 h-4" />
-                        </button>
+                      <div
+                        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                        onDragLeave={() => setIsDragging(false)}
+                        onDrop={handleDrop}
+                        onClick={() => fileInputRef.current?.click()}
+                        className={`border-2 border-dashed rounded-lg p-10 cursor-pointer transition-all ${
+                          isDragging
+                            ? "border-foreground bg-secondary/50"
+                            : "border-border hover:border-foreground/50 hover:bg-secondary/30"
+                        }`}
+                      >
+                        <div className="flex flex-col items-center gap-3 text-muted-foreground">
+                          <ImagePlus className="w-10 h-10" />
+                          <div>
+                            <p className="text-sm font-sans font-medium text-foreground">Drop your inspo here</p>
+                            <p className="text-xs font-sans mt-1">or click to browse</p>
+                          </div>
+                        </div>
                       </div>
-
-                      {/* Randomized example chips */}
-                      <div className="flex flex-wrap justify-center gap-2">
-                        {randomPrompts.map((prompt) => (
-                          <button
-                            key={prompt}
-                            onClick={() => handleInitialSubmit(prompt)}
-                            className="text-sm px-4 py-2 rounded-full border border-border text-muted-foreground hover:text-foreground hover:bg-secondary transition-all font-sans"
-                          >
-                            {prompt}
-                          </button>
-                        ))}
-                      </div>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleFileSelect(file);
+                        }}
+                        className="hidden"
+                      />
                     </motion.div>
                   ) : (
                     <motion.div
-                      key="filter-mode"
+                      key="preview-and-controls"
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
-                      className="max-w-lg mx-auto text-left"
+                      className="max-w-md mx-auto space-y-6 mb-8"
                     >
-                      {/* Optional occasion text */}
-                      <div className="mb-4">
-                        <p className="text-sm font-medium text-foreground mb-2 font-sans">Occasion (optional)</p>
-                        <input
-                          type="text"
-                          value={selectedPrefs["occasion_text"] || ""}
-                          onChange={(e) => handlePrefSelect("occasion_text", e.target.value)}
-                          placeholder="e.g. Beach holiday, office party..."
-                          className="w-full px-4 py-3 rounded-full border border-border bg-card text-foreground placeholder:text-muted-foreground text-sm font-sans focus:outline-none focus:ring-2 focus:ring-foreground/20 transition-all"
+                      {/* Image preview */}
+                      <div className="relative inline-block">
+                        <img
+                          src={uploadedImage}
+                          alt="Uploaded look"
+                          className="w-48 h-64 object-cover rounded-lg border border-border mx-auto"
                         />
-                      </div>
-
-                      <FollowUpChips
-                        options={FOLLOW_UP_OPTIONS}
-                        onSelect={handlePrefSelect}
-                        selectedValues={selectedPrefs}
-                        currencySelector={<CurrencySelector value={currency} onChange={setCurrency} />}
-                      />
-
-                      <div className="mt-6 flex justify-center">
-                        <motion.button
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ delay: 0.2 }}
-                          onClick={handleFilterSubmit}
-                          className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-foreground text-background font-sans text-sm font-medium hover:bg-foreground/80 transition-colors"
+                        <button
+                          onClick={() => setUploadedImage(null)}
+                          className="absolute -top-2 -right-2 p-1 rounded-full bg-foreground text-background hover:bg-foreground/80 transition-colors"
                         >
-                          <span>Generate My Outfits</span>
-                          <ArrowRight className="w-4 h-4" />
-                        </motion.button>
+                          <X className="w-3 h-3" />
+                        </button>
                       </div>
+
+                      {/* Style controls */}
+                      <StyleAdjuster
+                        budget={budget}
+                        onBudgetChange={setBudget}
+                        tone={tone}
+                        onToneChange={setTone}
+                        gender={gender}
+                        onGenderChange={setGender}
+                        currency={currency}
+                        onCurrencyChange={setCurrency}
+                        onSubmit={handleFindMyLook}
+                        isLoading={isLoading}
+                      />
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -489,34 +443,23 @@ Rules:
                   className={`${entry.role === "user" ? "flex justify-end" : ""}`}
                 >
                   {entry.role === "user" ? (
-                    <div className="bg-foreground text-background px-5 py-3 rounded-2xl rounded-br-sm max-w-md font-sans text-sm">
-                      {entry.content}
+                    <div className="flex flex-col items-end gap-2 max-w-md">
+                      {entry.imagePreview && (
+                        <img
+                          src={entry.imagePreview}
+                          alt="Your inspo"
+                          className="w-32 h-40 object-cover rounded-lg border border-border"
+                        />
+                      )}
+                      <div className="bg-foreground text-background px-5 py-3 rounded-2xl rounded-br-sm font-sans text-sm">
+                        {entry.content}
+                      </div>
                     </div>
                   ) : (
                     <div className="space-y-4 max-w-full">
                       {entry.content && (
                         <div className="prose prose-sm max-w-none text-foreground font-sans">
                           <ReactMarkdown>{entry.content}</ReactMarkdown>
-                        </div>
-                      )}
-                      {entry.showFollowUp && showFollowUp && (
-                        <div className="space-y-4 mt-4">
-                          <FollowUpChips
-                            options={FOLLOW_UP_OPTIONS}
-                            onSelect={handlePrefSelect}
-                            selectedValues={selectedPrefs}
-                            currencySelector={<CurrencySelector value={currency} onChange={setCurrency} />}
-                          />
-                          <motion.button
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: 0.3 }}
-                            onClick={handleFollowUpSubmit}
-                            className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-foreground text-background font-sans text-sm font-medium hover:bg-foreground/80 transition-colors"
-                          >
-                            <span>Generate My Outfits</span>
-                            <ArrowRight className="w-4 h-4" />
-                          </motion.button>
                         </div>
                       )}
                       {entry.outfits && entry.outfits.length > 0 && (
@@ -547,7 +490,7 @@ Rules:
       </AnimatePresence>
 
       {/* Persistent chat input bar */}
-      {hasStarted && !showFollowUp && (
+      {hasStarted && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -560,7 +503,7 @@ Rules:
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleChatFollowUp(input)}
-              placeholder={outfitsGenerated ? "Ask to refine, try different styles, or paste your own item data..." : "Type a message..."}
+              placeholder={outfitsGenerated ? "Make it more casual, swap the shoes, try different brands..." : "Type a message..."}
               disabled={isLoading}
               className="w-full px-5 py-3 pr-12 rounded-full border border-border bg-card text-foreground placeholder:text-muted-foreground text-sm font-sans focus:outline-none focus:ring-2 focus:ring-foreground/20 transition-all disabled:opacity-50"
             />

@@ -10,9 +10,28 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages } = await req.json();
+    const { messages, imageUrl } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    // If an imageUrl (base64 data URL) is provided, inject it into the first user message
+    // as a multimodal content block for Gemini vision
+    let processedMessages = [...messages];
+    if (imageUrl && typeof imageUrl === "string") {
+      // Find the first user message and convert it to multimodal format
+      processedMessages = messages.map((msg: any) => {
+        if (msg.role === "user" && typeof msg.content === "string" && msg === messages[messages.length - 1]) {
+          return {
+            ...msg,
+            content: [
+              { type: "image_url", image_url: { url: imageUrl } },
+              { type: "text", text: msg.content },
+            ],
+          };
+        }
+        return msg;
+      });
+    }
 
     let response: Response | null = null;
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -24,7 +43,7 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           model: "google/gemini-2.5-flash",
-          messages,
+          messages: processedMessages,
           stream: true,
         }),
       });
