@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 
 const IMAGE_CACHE_KEY = "stylecapsule_image_cache_v3";
 const BATCH_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/search-product-images`;
-const BATCH_DEBOUNCE_MS = 250;
+const BATCH_DEBOUNCE_MS = 150;
 
 // In-memory cache
 const memoryCache: Record<string, string> = {};
