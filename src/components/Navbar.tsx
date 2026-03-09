@@ -12,8 +12,9 @@ export function Navbar({ savedCount }: NavbarProps) {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
       <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
-        <Link to="/" className="text-lg tracking-[0.3em] font-light text-foreground uppercase" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
-          STYLECAPSULE
+        <Link to="/" className="flex items-baseline gap-1.5 text-foreground" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
+          <span className="text-lg tracking-[0.3em] font-light uppercase">STYLE</span>
+          <span className="font-handwritten text-xl" style={{ transform: "rotate(-2deg)" }}>capsule</span>
         </Link>
         <div className="flex items-center gap-4">
           <Link
