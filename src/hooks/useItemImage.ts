@@ -65,8 +65,6 @@ async function fetchWithRetry(prompt: string, retries = 2): Promise<string | nul
           continue;
         }
         return null;
-        }
-        return null;
       }
 
       const data = await res.json();
