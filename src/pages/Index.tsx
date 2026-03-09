@@ -6,6 +6,7 @@ import { OutfitCard } from "@/components/OutfitCard";
 import { StyleAdjuster } from "@/components/StyleAdjuster";
 import { ThinkingIndicator } from "@/components/ThinkingIndicator";
 import { getCurrencySymbol } from "@/components/CurrencySelector";
+import { CelebrityPicks } from "@/components/CelebrityPicks";
 import { useSavedOutfits } from "@/hooks/useSavedOutfits";
 import { streamChat, Msg } from "@/lib/streamChat";
 import { parseOutfitsFromText } from "@/lib/parseOutfits";
