@@ -9,7 +9,10 @@ const memoryCache: Record<string, string> = {};
 // Global request queue — strictly sequential to avoid 429s
 let requestQueue: Array<() => void> = [];
 let isProcessing = false;
-const DELAY_BETWEEN_REQUESTS = 8000; // 8s between requests to avoid gateway rate limits
+const DELAY_BETWEEN_REQUESTS = 12000; // 12s between requests to avoid gateway rate limits
+
+// Only generate images for core clothing — accessories use emojis
+const IMAGE_WORTHY_CATEGORIES = new Set(["top", "bottom", "shoes", "outerwear", "dress"]);
 
 function enqueueRequest(fn: () => void) {
   requestQueue.push(fn);
@@ -83,11 +86,18 @@ async function fetchWithRetry(prompt: string, retries = 2): Promise<string | nul
 
 export function useItemImage(itemDescription: string, brand: string, category: string) {
   const cacheKey = `${brand}-${itemDescription}-${category}`.toLowerCase().replace(/\s+/g, "-");
+  const shouldGenerate = IMAGE_WORTHY_CATEGORIES.has(category);
   const [imageUrl, setImageUrl] = useState<string | null>(memoryCache[cacheKey] || null);
-  const [isLoading, setIsLoading] = useState(!memoryCache[cacheKey]);
+  const [isLoading, setIsLoading] = useState(shouldGenerate && !memoryCache[cacheKey]);
   const fetchedRef = useRef(false);
 
   useEffect(() => {
+    // Skip image generation for accessories — they use emojis
+    if (!shouldGenerate) {
+      setIsLoading(false);
+      return;
+    }
+
     if (memoryCache[cacheKey]) {
       setImageUrl(memoryCache[cacheKey]);
       setIsLoading(false);
@@ -107,7 +117,6 @@ export function useItemImage(itemDescription: string, brand: string, category: s
 
     const prompt = `${brand} ${itemDescription} (${category})`;
 
-    // Enqueue instead of firing immediately
     enqueueRequest(async () => {
       const url = await fetchWithRetry(prompt);
       if (url) {
@@ -117,7 +126,7 @@ export function useItemImage(itemDescription: string, brand: string, category: s
       }
       setIsLoading(false);
     });
-  }, [cacheKey]);
+  }, [cacheKey, shouldGenerate]);
 
   return { imageUrl, isLoading };
 }
