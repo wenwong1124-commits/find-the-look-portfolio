@@ -6,11 +6,10 @@ const FUNC_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-ite
 // In-memory cache to avoid re-fetching during session
 const memoryCache: Record<string, string> = {};
 
-// Global request queue with concurrency
+// Global request queue — strictly sequential to avoid 429s
 let requestQueue: Array<() => void> = [];
-let activeRequests = 0;
-const MAX_CONCURRENT = 3;
-const DELAY_BETWEEN_REQUESTS = 1200; // 1.2s between launches
+let isProcessing = false;
+const DELAY_BETWEEN_REQUESTS = 4000; // 4s between requests
 
 function enqueueRequest(fn: () => void) {
   requestQueue.push(fn);
@@ -18,12 +17,12 @@ function enqueueRequest(fn: () => void) {
 }
 
 function processQueue() {
-  if (activeRequests >= MAX_CONCURRENT || requestQueue.length === 0) return;
-  activeRequests++;
+  if (isProcessing || requestQueue.length === 0) return;
+  isProcessing = true;
   const next = requestQueue.shift()!;
   next();
   setTimeout(() => {
-    activeRequests--;
+    isProcessing = false;
     processQueue();
   }, DELAY_BETWEEN_REQUESTS);
 }
@@ -63,7 +62,7 @@ async function fetchWithRetry(prompt: string, retries = 2): Promise<string | nul
       if (res.status === 429) {
         // Rate limited — wait longer then retry
         if (attempt < retries) {
-          await new Promise((r) => setTimeout(r, 8000 * (attempt + 1)));
+          await new Promise((r) => setTimeout(r, 12000 * (attempt + 1)));
           continue;
         }
         return null;

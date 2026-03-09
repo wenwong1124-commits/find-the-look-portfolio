@@ -35,7 +35,7 @@ Professional e-commerce photography, centered composition.`;
       });
 
       if (response.status === 429 && attempt < 2) {
-        await new Promise((r) => setTimeout(r, 6000 * (attempt + 1)));
+        await new Promise((r) => setTimeout(r, 10000 * (attempt + 1)));
         continue;
       }
       break;
