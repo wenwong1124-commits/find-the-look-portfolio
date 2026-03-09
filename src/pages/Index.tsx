@@ -6,6 +6,7 @@ import { OutfitCard } from "@/components/OutfitCard";
 import { StyleAdjuster } from "@/components/StyleAdjuster";
 import { ThinkingIndicator } from "@/components/ThinkingIndicator";
 import { getCurrencySymbol } from "@/components/CurrencySelector";
+import { CelebrityPicks } from "@/components/CelebrityPicks";
 import { useSavedOutfits } from "@/hooks/useSavedOutfits";
 import { streamChat, Msg } from "@/lib/streamChat";
 import { parseOutfitsFromText } from "@/lib/parseOutfits";
@@ -99,6 +100,128 @@ export default function Index() {
     const file = e.dataTransfer.files[0];
     if (file) handleFileSelect(file);
   }, [handleFileSelect]);
+
+  const handleCelebrityPick = async (celebrity: string, style: string) => {
+    setHasStarted(true);
+    const currencySymbol = getCurrencySymbol(currency);
+    const toneDesc = TONE_LABELS[tone];
+
+    setChatEntries([
+      {
+        id: crypto.randomUUID(),
+        role: "user",
+        content: `Steal ${celebrity}'s ${style.toLowerCase()} look — budget ${budget}, ${gender}'s fashion in ${currency}`,
+      },
+    ]);
+
+    setIsLoading(true);
+
+    const systemPrompt = `You are StyleCapsule, an expert AI fashion stylist specializing in recreating celebrity looks.
+
+The user wants to recreate a celebrity's style. Your job:
+1. Briefly describe the celebrity's signature ${style.toLowerCase()} style and recent fashion choices (2-3 sentences).
+2. Then generate 3 outfit sets that capture their ${style.toLowerCase()} aesthetic within the user's preferences.
+
+User preferences:
+- Gender: ${gender}
+- Budget: ${budget} total per outfit
+- Style tone: ${style.toLowerCase()} (Casual = everyday streetwear, Elevated = polished/refined, Bold = statement/daring)
+- Currency: ${currency} (${currencySymbol})
+
+Return your response in TWO parts:
+1. A brief style analysis + why your recreations capture the celebrity's vibe.
+2. A JSON block with outfit data:
+
+\`\`\`json
+[
+  {
+    "id": "unique-id",
+    "name": "Outfit Name",
+    "explanation": "Why this outfit captures the celebrity's style.",
+    "stylingTips": ["Tip 1", "Tip 2", "Tip 3"],
+    "occasion": "${celebrity} inspired — ${style}",
+    "items": [
+      {
+        "name": "Item Name",
+        "brand": "Brand Name",
+        "price": 89,
+        "currency": "${currencySymbol}",
+        "color": "Color",
+        "material": "Material",
+        "category": "top|bottom|shoes|bag|accessory|outerwear|dress",
+        "sizes": ["XS","S","M","L","XL"],
+        "shopUrl": "https://brand-website.com/product",
+        "imageDescription": "Brief description of the item for image generation"
+      }
+    ]
+  }
+]
+\`\`\`
+
+Rules:
+- Generate exactly 3 outfit sets
+- Each outfit: top, bottom, shoes, bag, 1+ accessory (or dress + shoes + bag + accessory)
+- Use REAL fashion brands and realistic prices in ${currency}
+- shopUrl should link to real brand websites
+- Mix brands across outfits for variety
+- After showing outfits, ask if they want changes`;
+
+    const userMessage = `Recreate ${celebrity}'s latest ${style.toLowerCase()} style. Create 3 outfit options. Budget: ${budget} per outfit. Gender: ${gender}. Currency: ${currency}.`;
+
+    const messages: Msg[] = [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userMessage },
+    ];
+
+    setConversationHistory([{ role: "user", content: userMessage }]);
+
+    let assistantText = "";
+
+    try {
+      await streamChat({
+        messages,
+        onDelta: (chunk) => {
+          assistantText += chunk;
+          const displayText = assistantText
+            .replace(/```json[\s\S]*?```/g, "")
+            .replace(/```json[\s\S]*$/g, "")
+            .trim();
+          setChatEntries((prev) => {
+            const last = prev[prev.length - 1];
+            if (last?.role === "assistant") {
+              return prev.map((e, i) =>
+                i === prev.length - 1 ? { ...e, content: displayText } : e
+              );
+            }
+            return [...prev, { id: crypto.randomUUID(), role: "assistant", content: displayText }];
+          });
+        },
+        onDone: () => {
+          const outfits = parseOutfitsFromText(assistantText);
+          if (outfits.length > 0) {
+            setChatEntries((prev) => {
+              const newEntries = [...prev];
+              let lastAssistant = -1;
+              for (let i = newEntries.length - 1; i >= 0; i--) {
+                if (newEntries[i].role === "assistant") { lastAssistant = i; break; }
+              }
+              if (lastAssistant >= 0) {
+                const cleanText = assistantText.replace(/```json[\s\S]*?```/, "").trim();
+                newEntries[lastAssistant] = { ...newEntries[lastAssistant], content: cleanText, outfits };
+              }
+              return newEntries;
+            });
+          }
+          setConversationHistory((prev) => [...prev, { role: "assistant", content: assistantText }]);
+          setOutfitsGenerated(true);
+          setIsLoading(false);
+        },
+      });
+    } catch (e: any) {
+      toast.error(e.message || "Something went wrong. Please try again.");
+      setIsLoading(false);
+    }
+  };
 
   const handleFindMyLook = async () => {
     if (!uploadedImage) return;
@@ -493,6 +616,18 @@ Rules:
                     </motion.div>
                   )}
                 </AnimatePresence>
+
+                {/* Celebrity picks */}
+                {!uploadedImage && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.5 }}
+                    className="mt-12"
+                  >
+                    <CelebrityPicks onSelect={handleCelebrityPick} disabled={isLoading} />
+                  </motion.div>
+                )}
               </motion.div>
             </div>
           </motion.div>

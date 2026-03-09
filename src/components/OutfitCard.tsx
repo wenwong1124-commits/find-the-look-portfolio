@@ -33,34 +33,27 @@ const categoryBgColors = [
 
 function ItemImage({ item, index }: { item: OutfitItem; index: number }) {
   const { imageUrl, isLoading } = useItemImage(item.name, item.brand, item.category);
+  const emoji = categoryEmojis[item.category] || "👔";
 
-  if (isLoading) {
-    return (
-      <div className={cn(
-        "w-16 h-16 rounded-lg flex items-center justify-center text-xl flex-shrink-0 animate-pulse",
-        categoryBgColors[index % categoryBgColors.length]
-      )}>
-        <span className="text-sm">{categoryEmojis[item.category] || "👔"}</span>
-      </div>
-    );
-  }
-
-  if (imageUrl) {
-    return (
-      <img
-        src={imageUrl}
-        alt={`${item.brand} ${item.name}`}
-        className="w-16 h-16 rounded-lg object-contain flex-shrink-0"
-      />
-    );
-  }
-
+  // Always show emoji first; fade in real image when ready
   return (
     <div className={cn(
-      "w-16 h-16 rounded-lg flex items-center justify-center text-xl flex-shrink-0",
+      "w-16 h-16 rounded-lg flex items-center justify-center text-xl flex-shrink-0 relative overflow-hidden",
       categoryBgColors[index % categoryBgColors.length]
     )}>
-      {categoryEmojis[item.category] || "👔"}
+      <span className={cn("transition-opacity duration-300", imageUrl ? "opacity-0" : "opacity-100")}>
+        {emoji}
+      </span>
+      {imageUrl && (
+        <motion.img
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4 }}
+          src={imageUrl}
+          alt={`${item.brand} ${item.name}`}
+          className="absolute inset-0 w-full h-full object-contain"
+        />
+      )}
     </div>
   );
 }

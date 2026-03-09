@@ -6,10 +6,11 @@ const FUNC_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-ite
 // In-memory cache to avoid re-fetching during session
 const memoryCache: Record<string, string> = {};
 
-// Global request queue to stagger API calls
+// Global request queue with concurrency
 let requestQueue: Array<() => void> = [];
-let isProcessing = false;
-const DELAY_BETWEEN_REQUESTS = 5000; // 5s between requests to avoid 429s
+let activeRequests = 0;
+const MAX_CONCURRENT = 3;
+const DELAY_BETWEEN_REQUESTS = 1200; // 1.2s between launches
 
 function enqueueRequest(fn: () => void) {
   requestQueue.push(fn);
@@ -17,12 +18,12 @@ function enqueueRequest(fn: () => void) {
 }
 
 function processQueue() {
-  if (isProcessing || requestQueue.length === 0) return;
-  isProcessing = true;
+  if (activeRequests >= MAX_CONCURRENT || requestQueue.length === 0) return;
+  activeRequests++;
   const next = requestQueue.shift()!;
   next();
   setTimeout(() => {
-    isProcessing = false;
+    activeRequests--;
     processQueue();
   }, DELAY_BETWEEN_REQUESTS);
 }
