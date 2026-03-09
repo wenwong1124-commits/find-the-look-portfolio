@@ -15,29 +15,32 @@ import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 
 const SCRAPBOOK_IMAGES = [
-  { src: "/images/hero-1.jpg", style: { top: "3%", left: "2%", width: "190px", transform: "rotate(-7deg)" } },
-  { src: "/images/hero-2.jpg", style: { top: "2%", right: "3%", width: "175px", transform: "rotate(5deg)" } },
-  { src: "/images/hero-3.jpg", style: { top: "35%", left: "1%", width: "160px", transform: "rotate(9deg)" } },
-  { src: "/images/hero-4.jpg", style: { top: "30%", right: "2%", width: "155px", transform: "rotate(-6deg)" } },
-  { src: "/images/hero-5.jpg", style: { bottom: "18%", left: "3%", width: "170px", transform: "rotate(-4deg)" } },
-  { src: "/images/hero-6.jpg", style: { bottom: "15%", right: "4%", width: "150px", transform: "rotate(7deg)" } },
-  { src: "/images/hero-7.jpg", style: { bottom: "2%", left: "18%", width: "145px", transform: "rotate(3deg)" } },
-  { src: "/images/hero-8.jpg", style: { top: "60%", right: "18%", width: "140px", transform: "rotate(-8deg)" } },
+  { src: "/images/hero-1.jpg", style: { top: "1%", left: "1%", width: "200px", transform: "rotate(-11deg)" }, z: 3 },
+  { src: "/images/hero-2.jpg", style: { top: "-2%", right: "8%", width: "185px", transform: "rotate(7deg)" }, z: 2 },
+  { src: "/images/hero-3.jpg", style: { top: "28%", left: "-1%", width: "170px", transform: "rotate(13deg)" }, z: 4 },
+  { src: "/images/hero-4.jpg", style: { top: "22%", right: "1%", width: "160px", transform: "rotate(-9deg)" }, z: 1 },
+  { src: "/images/hero-5.jpg", style: { bottom: "12%", left: "0%", width: "185px", transform: "rotate(-6deg)" }, z: 5 },
+  { src: "/images/hero-6.jpg", style: { bottom: "8%", right: "2%", width: "165px", transform: "rotate(10deg)" }, z: 2 },
+  { src: "/images/hero-7.jpg", style: { bottom: "-1%", left: "22%", width: "155px", transform: "rotate(4deg)" }, z: 3 },
+  { src: "/images/hero-8.jpg", style: { top: "55%", right: "14%", width: "150px", transform: "rotate(-12deg)" }, z: 4 },
 ];
 
 const HANDWRITTEN_LABELS = [
-  { text: "feel alive ✦", style: { top: "12%", left: "22%", transform: "rotate(-12deg)", fontSize: "1.4rem" } },
-  { text: "chic street →", style: { top: "18%", right: "20%", transform: "rotate(6deg)", fontSize: "1.2rem" } },
-  { text: "city jam ♡", style: { bottom: "28%", left: "15%", transform: "rotate(-5deg)", fontSize: "1.1rem" } },
-  { text: "inspo!", style: { top: "50%", right: "18%", transform: "rotate(8deg)", fontSize: "1.5rem" } },
-  { text: "mood board ★", style: { bottom: "12%", right: "22%", transform: "rotate(-3deg)", fontSize: "1rem" } },
+  { text: "it girl energy ✦", style: { top: "8%", left: "24%", transform: "rotate(-14deg)", fontSize: "1.5rem" } },
+  { text: "street style →", style: { top: "15%", right: "22%", transform: "rotate(8deg)", fontSize: "1.3rem" } },
+  { text: "obsessed ♡", style: { bottom: "30%", left: "12%", transform: "rotate(-7deg)", fontSize: "1.2rem" } },
+  { text: "main character!", style: { top: "48%", right: "16%", transform: "rotate(11deg)", fontSize: "1.6rem" } },
+  { text: "slay ★", style: { bottom: "8%", right: "25%", transform: "rotate(-4deg)", fontSize: "1.1rem" } },
+  { text: "core memory ~", style: { top: "38%", left: "20%", transform: "rotate(5deg)", fontSize: "1rem" } },
 ];
 
 const TAPE_DECORATIONS = [
-  { style: { top: "8%", left: "12%", transform: "rotate(-20deg)", width: "50px", height: "14px" }, color: "tape-pink" },
-  { style: { top: "10%", right: "18%", transform: "rotate(15deg)", width: "45px", height: "12px" }, color: "tape-green" },
-  { style: { bottom: "22%", left: "8%", transform: "rotate(-30deg)", width: "55px", height: "14px" }, color: "tape-blue" },
-  { style: { top: "45%", right: "4%", transform: "rotate(25deg)", width: "40px", height: "12px" }, color: "" },
+  { style: { top: "5%", left: "10%", transform: "rotate(-22deg)", width: "55px", height: "14px" }, color: "tape-pink" },
+  { style: { top: "6%", right: "20%", transform: "rotate(18deg)", width: "48px", height: "13px" }, color: "tape-green" },
+  { style: { bottom: "20%", left: "5%", transform: "rotate(-35deg)", width: "52px", height: "14px" }, color: "tape-blue" },
+  { style: { top: "40%", right: "3%", transform: "rotate(28deg)", width: "45px", height: "12px" }, color: "" },
+  { style: { bottom: "5%", left: "28%", transform: "rotate(-15deg)", width: "50px", height: "13px" }, color: "tape-pink" },
+  { style: { top: "62%", right: "20%", transform: "rotate(12deg)", width: "42px", height: "12px" }, color: "tape-green" },
 ];
 
 const TONE_LABELS: Record<number, string> = {
