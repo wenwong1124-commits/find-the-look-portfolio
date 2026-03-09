@@ -22,7 +22,7 @@ const categoryBgColors = [
 ];
 
 function ItemImage({ item, index }: { item: OutfitItem; index: number }) {
-  const { imageUrl, isLoading, emoji } = useItemImage(item.name, item.brand, item.category);
+  const { imageUrl, isLoading, emoji } = useItemImage(item.name, item.brand, item.category, item.color, item.material);
 
   return (
     <div className={cn(
