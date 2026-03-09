@@ -129,6 +129,10 @@ export function OutfitCard({ outfit, isSaved, onToggleSave, index, feedback, onF
           </div>
         ))}
       </div>
+
+      {onFeedback && (
+        <OutfitFeedback feedback={feedback} onFeedback={onFeedback} />
+      )}
     </motion.div>
   );
 }
