@@ -74,6 +74,22 @@ export default function Index() {
   const [currency, setCurrency] = useState("HKD");
   const [outfitsGenerated, setOutfitsGenerated] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [feedbackMap, setFeedbackMap] = useState<Record<string, OutfitFeedbackData>>({});
+
+  const getFeedbackSummary = useCallback(() => {
+    const entries = Object.entries(feedbackMap);
+    if (entries.length === 0) return "";
+    const lines = entries.map(([id, fb]) => {
+      const vote = fb.vote === "up" ? "👍" : "👎";
+      const tags = fb.tags.length > 0 ? ` — tags: ${fb.tags.join(", ")}` : "";
+      return `- Outfit "${id}": ${vote}${tags}`;
+    });
+    return `\nUser feedback on previous suggestions:\n${lines.join("\n")}\nAvoid repeating disliked patterns. Lean into liked patterns.\n`;
+  }, [feedbackMap]);
+
+  const handleOutfitFeedback = useCallback((outfitName: string, data: OutfitFeedbackData) => {
+    setFeedbackMap((prev) => ({ ...prev, [outfitName]: data }));
+  }, []);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const followUpInputRef = useRef<HTMLInputElement>(null);
