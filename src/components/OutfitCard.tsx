@@ -2,7 +2,7 @@ import { CapsuleOutfit, OutfitItem } from "@/types/outfit";
 import { Heart, ExternalLink, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { useItemImage } from "@/hooks/useItemImage";
+import { getItemEmoji } from "@/hooks/useItemImage";
 import { ScrapbookOutfitView } from "@/components/ScrapbookOutfitView";
 
 interface OutfitCardProps {
@@ -11,22 +11,6 @@ interface OutfitCardProps {
   onToggleSave: () => void;
   index: number;
 }
-
-const categoryEmojis: Record<string, string> = {
-  top: "👕",
-  bottom: "👖",
-  shoes: "👢",
-  bag: "👜",
-  accessory: "💍",
-  outerwear: "🧥",
-  dress: "👗",
-  hat: "🎩",
-  scarf: "🧣",
-  belt: "🪢",
-  jewelry: "💎",
-  sunglasses: "🕶️",
-  watch: "⌚",
-};
 
 const categoryBgColors = [
   "bg-secondary/60",
@@ -37,29 +21,14 @@ const categoryBgColors = [
   "bg-muted/50",
 ];
 
-function ItemImage({ item, index }: { item: OutfitItem; index: number }) {
-  const { imageUrl, isLoading } = useItemImage(item.name, item.brand, item.category);
-  const emoji = categoryEmojis[item.category] || "👔";
-
-  // Always show emoji first; fade in real image when ready
+function ItemEmoji({ item, index }: { item: OutfitItem; index: number }) {
+  const emoji = getItemEmoji(item.category);
   return (
     <div className={cn(
-      "w-16 h-16 rounded-lg flex items-center justify-center text-xl flex-shrink-0 relative overflow-hidden",
+      "w-16 h-16 rounded-lg flex items-center justify-center text-xl flex-shrink-0",
       categoryBgColors[index % categoryBgColors.length]
     )}>
-      <span className={cn("transition-opacity duration-300", imageUrl ? "opacity-0" : "opacity-100")}>
-        {emoji}
-      </span>
-      {imageUrl && (
-        <motion.img
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.4 }}
-          src={imageUrl}
-          alt={`${item.brand} ${item.name}`}
-          className="absolute inset-0 w-full h-full object-contain"
-        />
-      )}
+      {emoji}
     </div>
   );
 }
@@ -124,11 +93,11 @@ export function OutfitCard({ outfit, isSaved, onToggleSave, index }: OutfitCardP
         </div>
       )}
 
-      {/* All items — no limit, centered images */}
+      {/* All items */}
       <div className="divide-y divide-border">
         {outfit.items.map((item, i) => (
           <div key={i} className="flex items-center gap-3 px-4 py-3">
-            <ItemImage item={item} index={i} />
+            <ItemEmoji item={item} index={i} />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-foreground font-sans truncate">{item.brand}</p>
               <p className="text-[11px] text-muted-foreground font-sans truncate">{item.name}</p>
