@@ -4,12 +4,15 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useItemImage } from "@/hooks/useItemImage";
 import { ScrapbookOutfitView } from "@/components/ScrapbookOutfitView";
+import { OutfitFeedback, OutfitFeedbackData } from "@/components/OutfitFeedback";
 
 interface OutfitCardProps {
   outfit: CapsuleOutfit;
   isSaved: boolean;
   onToggleSave: () => void;
   index: number;
+  feedback?: OutfitFeedbackData;
+  onFeedback?: (data: OutfitFeedbackData) => void;
 }
 
 const categoryBgColors = [
