@@ -668,6 +668,8 @@ Rules:
                               onToggleSave={() =>
                                 isOutfitSaved(outfit.id) ? removeOutfit(outfit.id) : saveOutfit(outfit)
                               }
+                              feedback={feedbackMap[outfit.name]}
+                              onFeedback={(data) => handleOutfitFeedback(outfit.name, data)}
                             />
                           ))}
                         </div>
