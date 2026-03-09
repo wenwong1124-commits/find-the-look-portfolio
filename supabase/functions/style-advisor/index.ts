@@ -48,7 +48,7 @@ serve(async (req) => {
         }),
       });
       if (response.status === 429 && attempt < 2) {
-        await new Promise((r) => setTimeout(r, 5000 * (attempt + 1)));
+        await new Promise((r) => setTimeout(r, 10000 * (attempt + 1)));
         continue;
       }
       break;
