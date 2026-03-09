@@ -45,17 +45,23 @@ function ScrapbookItem({ item, index, total }: { item: OutfitItem; index: number
         />
       )}
 
-      {/* Item image */}
-      <div className="bg-card border border-border/30 p-1.5 shadow-sm" style={{ transform: `rotate(${rotation * 0.3}deg)` }}>
-        {isLoading ? (
-          <div className="w-full aspect-square bg-muted animate-pulse" />
-        ) : imageUrl ? (
-          <img src={imageUrl} alt={item.name} className="w-full aspect-square object-contain" />
-        ) : (
-          <div className="w-full aspect-square bg-muted flex items-center justify-center text-2xl">
+      {/* Item image — emoji-first, fade in real image */}
+      <div className="bg-card border border-border/30 p-1.5 shadow-sm relative" style={{ transform: `rotate(${rotation * 0.3}deg)` }}>
+        <div className="w-full aspect-square bg-muted flex items-center justify-center text-2xl relative overflow-hidden">
+          <span className={`transition-opacity duration-300 ${imageUrl ? "opacity-0" : "opacity-100"}`}>
             {item.category === "top" ? "👕" : item.category === "bottom" ? "👖" : item.category === "shoes" ? "👢" : item.category === "bag" ? "👜" : item.category === "dress" ? "👗" : "👔"}
-          </div>
-        )}
+          </span>
+          {imageUrl && (
+            <motion.img
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.4 }}
+              src={imageUrl}
+              alt={item.name}
+              className="absolute inset-0 w-full h-full object-contain"
+            />
+          )}
+        </div>
       </div>
 
       {/* Handwritten label */}
