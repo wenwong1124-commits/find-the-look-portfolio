@@ -3,6 +3,7 @@ import { Heart, ExternalLink, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useItemImage } from "@/hooks/useItemImage";
+import { ScrapbookOutfitView } from "@/components/ScrapbookOutfitView";
 
 interface OutfitCardProps {
   outfit: CapsuleOutfit;
