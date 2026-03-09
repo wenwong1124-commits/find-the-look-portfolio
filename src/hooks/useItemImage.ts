@@ -9,7 +9,10 @@ const memoryCache: Record<string, string> = {};
 // Global request queue — strictly sequential to avoid 429s
 let requestQueue: Array<() => void> = [];
 let isProcessing = false;
-const DELAY_BETWEEN_REQUESTS = 8000; // 8s between requests to avoid gateway rate limits
+const DELAY_BETWEEN_REQUESTS = 12000; // 12s between requests to avoid gateway rate limits
+
+// Only generate images for core clothing — accessories use emojis
+const IMAGE_WORTHY_CATEGORIES = new Set(["top", "bottom", "shoes", "outerwear", "dress"]);
 
 function enqueueRequest(fn: () => void) {
   requestQueue.push(fn);
