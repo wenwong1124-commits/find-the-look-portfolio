@@ -386,28 +386,62 @@ Rules:
               {SCRAPBOOK_IMAGES.map((img, i) => (
                 <motion.div
                   key={i}
-                  initial={{ opacity: 0, scale: 0.85, rotate: 0 }}
-                  animate={{ opacity: 0.85, scale: 1 }}
-                  transition={{ duration: 0.7, delay: 0.12 * i }}
+                  initial={{ opacity: 0, scale: 0.8, rotate: -5 + i * 3 }}
+                  animate={{ 
+                    opacity: 0.92, 
+                    scale: 1,
+                    y: [0, -4 + (i % 3) * 3, 0],
+                  }}
+                  transition={{ 
+                    duration: 0.7, 
+                    delay: 0.08 * i,
+                    y: { duration: 3 + i * 0.5, repeat: Infinity, ease: "easeInOut", delay: i * 0.4 },
+                  }}
                   className="absolute"
-                  style={img.style}
+                  style={{ ...img.style, zIndex: img.z }}
                 >
                   {/* Tape on top */}
                   <div
                     className={`tape ${TAPE_DECORATIONS[i % TAPE_DECORATIONS.length]?.color || ""}`}
                     style={{
-                      top: "-6px",
-                      left: "30%",
-                      transform: `rotate(${-20 + i * 12}deg)`,
-                      width: "48px",
-                      height: "13px",
+                      top: "-7px",
+                      left: i % 2 === 0 ? "20%" : "45%",
+                      transform: `rotate(${-25 + i * 10}deg)`,
+                      width: "50px",
+                      height: "14px",
                     }}
                   />
+                  {/* Second tape on some images */}
+                  {i % 3 === 0 && (
+                    <div
+                      className={`tape ${TAPE_DECORATIONS[(i + 2) % TAPE_DECORATIONS.length]?.color || ""}`}
+                      style={{
+                        bottom: "-6px",
+                        right: "15%",
+                        transform: `rotate(${15 - i * 8}deg)`,
+                        width: "42px",
+                        height: "12px",
+                      }}
+                    />
+                  )}
                   <img
                     src={img.src}
                     alt=""
-                    className="w-full aspect-[3/4] object-cover border-[3px] border-card/80 shadow-lg"
+                    className="w-full aspect-[3/4] object-cover shadow-xl"
+                    style={{
+                      border: "4px solid rgba(255,255,255,0.85)",
+                      boxShadow: `${2 + i}px ${3 + i}px ${8 + i * 2}px rgba(0,0,0,0.35)`,
+                    }}
                   />
+                  {/* Handwritten item label under some photos */}
+                  {i % 2 === 0 && (
+                    <span
+                      className="block font-handwritten text-card/50 text-xs mt-1 text-center"
+                      style={{ transform: `rotate(${-3 + i * 2}deg)` }}
+                    >
+                      {["✂ cut here", "♡♡♡", "→ love this", "★ fave"][i % 4]}
+                    </span>
+                  )}
                 </motion.div>
               ))}
 
