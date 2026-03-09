@@ -117,7 +117,7 @@ serve(async (req) => {
       return url;
     });
 
-    await withConcurrencyLimit(tasks, 10);
+    await withConcurrencyLimit(tasks, 4);
 
     const found = Object.values(results).filter(Boolean).length;
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
