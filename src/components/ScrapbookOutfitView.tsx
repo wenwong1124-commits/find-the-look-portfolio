@@ -1,5 +1,5 @@
 import { OutfitItem } from "@/types/outfit";
-import { getItemEmoji } from "@/hooks/useItemImage";
+import { useItemImage } from "@/hooks/useItemImage";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 
@@ -8,7 +8,7 @@ const TAPE_COLORS = ["tape-pink", "tape-green", "tape-blue", ""];
 const ANNOTATIONS = ["♡", "✦", "★", "→", "◯", "✿"];
 
 function ScrapbookItem({ item, index }: { item: OutfitItem; index: number }) {
-  const emoji = getItemEmoji(item.category);
+  const { imageUrl, emoji } = useItemImage(item.name, item.brand, item.category);
   const rotation = ROTATIONS[index % ROTATIONS.length];
   const tapeColor = TAPE_COLORS[index % TAPE_COLORS.length];
   const showTape = index % 3 !== 1;
@@ -44,8 +44,20 @@ function ScrapbookItem({ item, index }: { item: OutfitItem; index: number }) {
       )}
 
       <div className="bg-card border border-border/30 p-1.5 shadow-sm relative" style={{ transform: `rotate(${rotation * 0.3}deg)` }}>
-        <div className="w-full aspect-square bg-muted flex items-center justify-center text-2xl">
-          {emoji}
+        <div className="w-full aspect-square bg-muted flex items-center justify-center text-2xl relative overflow-hidden">
+          <span className={cn("transition-opacity duration-300", imageUrl ? "opacity-0" : "opacity-100")}>
+            {emoji}
+          </span>
+          {imageUrl && (
+            <motion.img
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.4 }}
+              src={imageUrl}
+              alt={item.name}
+              className="absolute inset-0 w-full h-full object-contain"
+            />
+          )}
         </div>
       </div>
 

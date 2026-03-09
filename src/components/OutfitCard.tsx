@@ -2,7 +2,7 @@ import { CapsuleOutfit, OutfitItem } from "@/types/outfit";
 import { Heart, ExternalLink, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { getItemEmoji } from "@/hooks/useItemImage";
+import { useItemImage } from "@/hooks/useItemImage";
 import { ScrapbookOutfitView } from "@/components/ScrapbookOutfitView";
 
 interface OutfitCardProps {
@@ -21,14 +21,27 @@ const categoryBgColors = [
   "bg-muted/50",
 ];
 
-function ItemEmoji({ item, index }: { item: OutfitItem; index: number }) {
-  const emoji = getItemEmoji(item.category);
+function ItemImage({ item, index }: { item: OutfitItem; index: number }) {
+  const { imageUrl, isLoading, emoji } = useItemImage(item.name, item.brand, item.category);
+
   return (
     <div className={cn(
-      "w-16 h-16 rounded-lg flex items-center justify-center text-xl flex-shrink-0",
+      "w-16 h-16 rounded-lg flex items-center justify-center text-xl flex-shrink-0 relative overflow-hidden",
       categoryBgColors[index % categoryBgColors.length]
     )}>
-      {emoji}
+      <span className={cn("transition-opacity duration-300", imageUrl ? "opacity-0" : "opacity-100")}>
+        {emoji}
+      </span>
+      {imageUrl && (
+        <motion.img
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4 }}
+          src={imageUrl}
+          alt={`${item.brand} ${item.name}`}
+          className="absolute inset-0 w-full h-full object-contain"
+        />
+      )}
     </div>
   );
 }
@@ -41,10 +54,8 @@ export function OutfitCard({ outfit, isSaved, onToggleSave, index }: OutfitCardP
       transition={{ duration: 0.5, delay: index * 0.12 }}
       className="border border-border rounded-lg overflow-hidden bg-card flex flex-col"
     >
-      {/* Scrapbook overview */}
       <ScrapbookOutfitView items={outfit.items} outfitName={outfit.name} />
 
-      {/* Header: title, occasion, save */}
       <div className="flex items-start justify-between px-4 py-3 border-b border-border">
         <div className="min-w-0 flex-1">
           <h3 className="text-sm font-semibold text-foreground font-sans truncate">
@@ -67,7 +78,6 @@ export function OutfitCard({ outfit, isSaved, onToggleSave, index }: OutfitCardP
         </button>
       </div>
 
-      {/* Explanation & Styling Tips */}
       {(outfit.explanation || (outfit.stylingTips && outfit.stylingTips.length > 0)) && (
         <div className="px-4 py-3 border-b border-border space-y-2">
           {outfit.explanation && (
@@ -93,11 +103,10 @@ export function OutfitCard({ outfit, isSaved, onToggleSave, index }: OutfitCardP
         </div>
       )}
 
-      {/* All items */}
       <div className="divide-y divide-border">
         {outfit.items.map((item, i) => (
           <div key={i} className="flex items-center gap-3 px-4 py-3">
-            <ItemEmoji item={item} index={i} />
+            <ItemImage item={item} index={i} />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-foreground font-sans truncate">{item.brand}</p>
               <p className="text-[11px] text-muted-foreground font-sans truncate">{item.name}</p>
