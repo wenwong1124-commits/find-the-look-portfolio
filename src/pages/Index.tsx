@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Send, Upload, ImagePlus, X } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { OutfitCard } from "@/components/OutfitCard";
+import { OutfitFeedbackData } from "@/components/OutfitFeedback";
 import { StyleAdjuster } from "@/components/StyleAdjuster";
 import { ThinkingIndicator } from "@/components/ThinkingIndicator";
 import { getCurrencySymbol } from "@/components/CurrencySelector";
