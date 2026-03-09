@@ -28,7 +28,7 @@ export async function streamChat({
 
     if (resp.status === 429) {
       if (attempt < maxRetries - 1) {
-        await new Promise((r) => setTimeout(r, 6000 * (attempt + 1)));
+        await new Promise((r) => setTimeout(r, 10000 * (attempt + 1)));
         continue;
       }
       throw new Error("Rate limited — please try again in a moment.");
