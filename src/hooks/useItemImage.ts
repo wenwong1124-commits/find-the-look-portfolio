@@ -9,7 +9,7 @@ const memoryCache: Record<string, string> = {};
 // Global request queue — strictly sequential to avoid 429s
 let requestQueue: Array<() => void> = [];
 let isProcessing = false;
-const DELAY_BETWEEN_REQUESTS = 4000; // 4s between requests
+const DELAY_BETWEEN_REQUESTS = 8000; // 8s between requests to avoid gateway rate limits
 
 function enqueueRequest(fn: () => void) {
   requestQueue.push(fn);
