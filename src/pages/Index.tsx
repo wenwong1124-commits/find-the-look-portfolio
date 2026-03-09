@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Send, Upload, ImagePlus, X } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { OutfitCard } from "@/components/OutfitCard";
+import { OutfitFeedbackData } from "@/components/OutfitFeedback";
 import { StyleAdjuster } from "@/components/StyleAdjuster";
 import { ThinkingIndicator } from "@/components/ThinkingIndicator";
 import { getCurrencySymbol } from "@/components/CurrencySelector";
@@ -73,6 +74,22 @@ export default function Index() {
   const [currency, setCurrency] = useState("HKD");
   const [outfitsGenerated, setOutfitsGenerated] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [feedbackMap, setFeedbackMap] = useState<Record<string, OutfitFeedbackData>>({});
+
+  const getFeedbackSummary = useCallback(() => {
+    const entries = Object.entries(feedbackMap);
+    if (entries.length === 0) return "";
+    const lines = entries.map(([id, fb]) => {
+      const vote = fb.vote === "up" ? "👍" : "👎";
+      const tags = fb.tags.length > 0 ? ` — tags: ${fb.tags.join(", ")}` : "";
+      return `- Outfit "${id}": ${vote}${tags}`;
+    });
+    return `\nUser feedback on previous suggestions:\n${lines.join("\n")}\nAvoid repeating disliked patterns. Lean into liked patterns.\n`;
+  }, [feedbackMap]);
+
+  const handleOutfitFeedback = useCallback((outfitName: string, data: OutfitFeedbackData) => {
+    setFeedbackMap((prev) => ({ ...prev, [outfitName]: data }));
+  }, []);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const followUpInputRef = useRef<HTMLInputElement>(null);
@@ -293,6 +310,7 @@ Use REAL brands, realistic ${currency} prices. After showing outfits, ask if the
     setIsLoading(true);
     const currencySymbol = getCurrencySymbol(currency);
 
+    const feedbackContext = getFeedbackSummary();
     const systemPrompt = `You are StyleCapsule, an elite AI fashion stylist. The user previously received outfit suggestions and wants refinements.
 
 If they ask for different outfits or modifications, generate new outfit JSON blocks in the same format.
@@ -304,7 +322,7 @@ IMPORTANT — maintain consistency:
 - Maintain texture contrast and pairing quality.
 - Include the same level of accessory completeness — if original outfits had specific jewelry, hats, scarves etc., keep including them.
 - Use specific color names and material descriptions.
-
+${feedbackContext}
 Rules:
 - Gender: ${gender}
 - Budget: ${budget}
@@ -650,6 +668,8 @@ Rules:
                               onToggleSave={() =>
                                 isOutfitSaved(outfit.id) ? removeOutfit(outfit.id) : saveOutfit(outfit)
                               }
+                              feedback={feedbackMap[outfit.name]}
+                              onFeedback={(data) => handleOutfitFeedback(outfit.name, data)}
                             />
                           ))}
                         </div>

@@ -4,12 +4,15 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useItemImage } from "@/hooks/useItemImage";
 import { ScrapbookOutfitView } from "@/components/ScrapbookOutfitView";
+import { OutfitFeedback, OutfitFeedbackData } from "@/components/OutfitFeedback";
 
 interface OutfitCardProps {
   outfit: CapsuleOutfit;
   isSaved: boolean;
   onToggleSave: () => void;
   index: number;
+  feedback?: OutfitFeedbackData;
+  onFeedback?: (data: OutfitFeedbackData) => void;
 }
 
 const categoryBgColors = [
@@ -46,7 +49,7 @@ function ItemImage({ item, index }: { item: OutfitItem; index: number }) {
   );
 }
 
-export function OutfitCard({ outfit, isSaved, onToggleSave, index }: OutfitCardProps) {
+export function OutfitCard({ outfit, isSaved, onToggleSave, index, feedback, onFeedback }: OutfitCardProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
@@ -126,6 +129,10 @@ export function OutfitCard({ outfit, isSaved, onToggleSave, index }: OutfitCardP
           </div>
         ))}
       </div>
+
+      {onFeedback && (
+        <OutfitFeedback feedback={feedback} onFeedback={onFeedback} />
+      )}
     </motion.div>
   );
 }
