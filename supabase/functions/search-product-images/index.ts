@@ -9,21 +9,50 @@ const corsHeaders = {
 const BAD_IMAGE_PATTERNS = [
   "placeholder", "maintenance", "404", "error", "default", "no-image",
   "coming-soon", "unavailable", "broken", "spacer", "pixel", "tracking",
+  "logo", "icon", "banner", "sprite",
 ];
 
 function isValidImageUrl(url: string): boolean {
   if (!url || !url.startsWith("http")) return false;
   const lower = url.toLowerCase();
-  return !BAD_IMAGE_PATTERNS.some((p) => lower.includes(p));
+  if (BAD_IMAGE_PATTERNS.some((p) => lower.includes(p))) return false;
+  // Must look like an image URL or an OG image
+  const hasImageExt = /\.(jpg|jpeg|png|webp|avif)/i.test(lower);
+  const isOgOrCdn = lower.includes("og") || lower.includes("cdn") || lower.includes("image") || lower.includes("photo") || lower.includes("media");
+  return hasImageExt || isOgOrCdn;
 }
 
-// ── Strategy 1: Firecrawl ──
+// ── Concurrency limiter ──
+async function withConcurrencyLimit<T>(
+  tasks: (() => Promise<T>)[],
+  limit: number
+): Promise<T[]> {
+  const results: T[] = new Array(tasks.length);
+  let idx = 0;
+
+  async function worker() {
+    while (idx < tasks.length) {
+      const i = idx++;
+      results[i] = await tasks[i]();
+    }
+  }
+
+  const workers = Array.from({ length: Math.min(limit, tasks.length) }, () => worker());
+  await Promise.all(workers);
+  return results;
+}
+
+// ── Strategy 1: Firecrawl (fast, targeted) ──
 async function searchViaFirecrawl(
   apiKey: string,
   query: string
 ): Promise<string | null> {
   try {
-    const searchQuery = `${query} product photo site:zara.com OR site:hm.com OR site:asos.com OR site:nordstrom.com OR site:net-a-porter.com`;
+    // More targeted search — include color/material from query
+    const searchQuery = `${query} product site:zara.com OR site:hm.com OR site:asos.com OR site:nordstrom.com OR site:net-a-porter.com OR site:mango.com OR site:uniqlo.com`;
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000); // 8s timeout
 
     const response = await fetch("https://api.firecrawl.dev/v1/search", {
       method: "POST",
@@ -33,10 +62,13 @@ async function searchViaFirecrawl(
       },
       body: JSON.stringify({
         query: searchQuery,
-        limit: 3,
+        limit: 5, // more results = better chance of matching style
         scrapeOptions: { formats: ["links"] },
       }),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeout);
 
     if (response.status === 402) {
       console.warn("Firecrawl out of credits (402)");
@@ -52,8 +84,7 @@ async function searchViaFirecrawl(
 
     if (data.data && Array.isArray(data.data)) {
       for (const result of data.data) {
-        const ogImage =
-          result.metadata?.ogImage || result.metadata?.["og:image"];
+        const ogImage = result.metadata?.ogImage || result.metadata?.["og:image"];
         if (ogImage && isValidImageUrl(ogImage)) return ogImage;
         if (result.metadata?.image && isValidImageUrl(result.metadata.image))
           return result.metadata.image;
@@ -61,21 +92,33 @@ async function searchViaFirecrawl(
     }
     return null;
   } catch (e) {
-    console.error(`Firecrawl error for "${query}":`, e);
+    if (e instanceof DOMException && e.name === "AbortError") {
+      console.warn(`Firecrawl timeout for "${query}"`);
+    } else {
+      console.error(`Firecrawl error for "${query}":`, e);
+    }
     return null;
   }
 }
 
-// ── Strategy 2: Gemini native search (grounding) ──
+// ── Strategy 2: Gemini native search (fallback, style-aware) ──
 async function searchViaGemini(
   lovableApiKey: string,
   query: string
 ): Promise<string | null> {
   try {
-    const prompt = `Find a product image URL for this fashion item: "${query}". 
-Search major fashion retailers (Zara, H&M, ASOS, Nordstrom, Net-a-Porter, Mango, Uniqlo).
-Return ONLY a single direct image URL (https://...) pointing to a product photo. 
-No explanation, no markdown, just the raw URL. If you cannot find one, reply with exactly "NONE".`;
+    const prompt = `Find a product image URL for this fashion item: "${query}".
+
+IMPORTANT: The image must visually match the described COLOR and MATERIAL/TEXTURE.
+- If the query says "Dusty Rose Silk", find a dusty rose silk item, NOT a white or black one.
+- If the query says "Washed Denim", find actual denim, not polyester.
+
+Search retailers: Zara, H&M, ASOS, Nordstrom, Net-a-Porter, Mango, Uniqlo, COS, & Other Stories.
+Return ONLY a single direct image URL (https://...) of a product photo showing the item.
+No explanation, no markdown, just the raw URL. If you cannot find a good match, reply "NONE".`;
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
 
     const response = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
@@ -86,12 +129,15 @@ No explanation, no markdown, just the raw URL. If you cannot find one, reply wit
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-3.1-pro-preview",
+          model: "google/gemini-2.5-flash",
           messages: [{ role: "user", content: prompt }],
           stream: false,
         }),
+        signal: controller.signal,
       }
     );
+
+    clearTimeout(timeout);
 
     if (!response.ok) {
       console.error(`Gemini search error for "${query}":`, response.status);
@@ -103,7 +149,6 @@ No explanation, no markdown, just the raw URL. If you cannot find one, reply wit
 
     if (!content || content === "NONE" || content.length > 500) return null;
 
-    // Extract URL from response (may contain markdown or extra text)
     const urlMatch = content.match(/https?:\/\/[^\s"'\])<>]+/);
     if (urlMatch && isValidImageUrl(urlMatch[0])) {
       return urlMatch[0];
@@ -111,26 +156,28 @@ No explanation, no markdown, just the raw URL. If you cannot find one, reply wit
 
     return null;
   } catch (e) {
-    console.error(`Gemini search error for "${query}":`, e);
+    if (e instanceof DOMException && e.name === "AbortError") {
+      console.warn(`Gemini timeout for "${query}"`);
+    } else {
+      console.error(`Gemini search error for "${query}":`, e);
+    }
     return null;
   }
 }
 
-// ── Combined search with fallback ──
-let useFirecrawl = true; // flip to false if Firecrawl is unavailable for all queries
+// ── Combined: Firecrawl first, Gemini fallback ──
+let firecrawlAvailable = true;
 
 async function searchWithFallback(
   firecrawlKey: string | null,
   lovableKey: string,
   query: string
 ): Promise<string | null> {
-  // Try Firecrawl first if available
-  if (useFirecrawl && firecrawlKey) {
+  if (firecrawlAvailable && firecrawlKey) {
     const result = await searchViaFirecrawl(firecrawlKey, query);
     if (result) return result;
   }
 
-  // Fallback to Gemini native search
   return searchViaGemini(lovableKey, query);
 }
 
@@ -138,18 +185,14 @@ serve(async (req) => {
   if (req.method === "OPTIONS")
     return new Response(null, { headers: corsHeaders });
 
-  // Reset per-request
-  useFirecrawl = true;
+  firecrawlAvailable = true;
 
   try {
     const { queries } = await req.json();
     if (!queries || !Array.isArray(queries) || queries.length === 0) {
       return new Response(
         JSON.stringify({ error: "queries array is required" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -157,44 +200,33 @@ serve(async (req) => {
     const lovableKey = Deno.env.get("LOVABLE_API_KEY");
 
     if (!firecrawlKey) {
-      console.log("Firecrawl not configured, using Gemini fallback for all queries");
-      useFirecrawl = false;
+      console.log("Firecrawl not configured, using Gemini for all queries");
+      firecrawlAvailable = false;
     }
 
     if (!lovableKey && !firecrawlKey) {
       return new Response(
         JSON.stringify({ error: "No search providers configured" }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(
-      `Batch searching ${queries.length} items (Firecrawl: ${useFirecrawl ? "yes" : "no"}, Gemini fallback: yes)...`
-    );
+    const startTime = Date.now();
+    console.log(`Batch: ${queries.length} items (Firecrawl: ${firecrawlAvailable}, Gemini: yes)`);
 
-    // Run all searches in parallel
+    // Run with concurrency limit of 6 to avoid overwhelming APIs
     const results: Record<string, string | null> = {};
-    const settled = await Promise.allSettled(
-      queries.map(async (q: { key: string; query: string }) => {
-        const url = await searchWithFallback(
-          firecrawlKey,
-          lovableKey!,
-          q.query
-        );
-        results[q.key] = url;
-      })
-    );
-
-    settled.forEach((s, i) => {
-      if (s.status === "rejected")
-        console.error(`Query ${i} rejected:`, s.reason);
+    const tasks = queries.map((q: { key: string; query: string }) => async () => {
+      const url = await searchWithFallback(firecrawlKey, lovableKey!, q.query);
+      results[q.key] = url;
+      return url;
     });
 
+    await withConcurrencyLimit(tasks, 6);
+
     const found = Object.values(results).filter(Boolean).length;
-    console.log(`Batch complete. Found ${found}/${queries.length} images.`);
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    console.log(`Done: ${found}/${queries.length} images in ${elapsed}s`);
 
     return new Response(JSON.stringify({ results }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -202,14 +234,8 @@ serve(async (req) => {
   } catch (e) {
     console.error("search-product-images error:", e);
     return new Response(
-      JSON.stringify({
-        results: {},
-        error: e instanceof Error ? e.message : "Unknown",
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      JSON.stringify({ results: {}, error: e instanceof Error ? e.message : "Unknown" }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

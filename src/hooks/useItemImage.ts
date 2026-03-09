@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 
-const IMAGE_CACHE_KEY = "stylecapsule_image_cache_v2";
+const IMAGE_CACHE_KEY = "stylecapsule_image_cache_v3";
 const BATCH_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/search-product-images`;
-const BATCH_DEBOUNCE_MS = 300;
+const BATCH_DEBOUNCE_MS = 250;
 
 // In-memory cache
 const memoryCache: Record<string, string> = {};
@@ -38,8 +38,8 @@ function saveToDiskCache(entries: Record<string, string>) {
     const cache = loadDiskCache();
     Object.assign(cache, entries);
     const keys = Object.keys(cache);
-    if (keys.length > 200) {
-      const toDelete = keys.slice(0, keys.length - 200);
+    if (keys.length > 300) {
+      const toDelete = keys.slice(0, keys.length - 300);
       toDelete.forEach((k) => delete cache[k]);
     }
     localStorage.setItem(IMAGE_CACHE_KEY, JSON.stringify(cache));
@@ -67,7 +67,6 @@ async function flushBatch() {
     const data = await res.json();
     const results: Record<string, string> = data.results || {};
 
-    // Save all found images to disk cache at once
     const toCache: Record<string, string> = {};
     for (const item of batch) {
       const url = results[item.key] || null;
@@ -79,7 +78,6 @@ async function flushBatch() {
     }
     if (Object.keys(toCache).length > 0) saveToDiskCache(toCache);
   } catch {
-    // Resolve all with null on failure
     batch.forEach((b) => b.resolve(null));
   }
 }
@@ -92,7 +90,13 @@ function enqueueBatch(key: string, query: string): Promise<string | null> {
   });
 }
 
-export function useItemImage(itemDescription: string, brand: string, category: string) {
+export function useItemImage(
+  itemDescription: string,
+  brand: string,
+  category: string,
+  color?: string,
+  material?: string,
+) {
   const cacheKey = `${brand}-${itemDescription}-${category}`.toLowerCase().replace(/\s+/g, "-");
   const shouldSearch = IMAGE_WORTHY_CATEGORIES.has(category);
   const [imageUrl, setImageUrl] = useState<string | null>(memoryCache[cacheKey] || null);
@@ -122,7 +126,11 @@ export function useItemImage(itemDescription: string, brand: string, category: s
     if (fetchedRef.current) return;
     fetchedRef.current = true;
 
-    const query = `${brand} ${itemDescription}`;
+    // Build a rich query with color + material for style-accurate results
+    const parts = [brand, itemDescription];
+    if (color) parts.push(color);
+    if (material) parts.push(material);
+    const query = parts.join(" ");
 
     enqueueBatch(cacheKey, query).then((url) => {
       if (url) setImageUrl(url);
