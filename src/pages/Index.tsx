@@ -6,7 +6,7 @@ import { OutfitCard } from "@/components/OutfitCard";
 import { OutfitFeedbackData } from "@/components/OutfitFeedback";
 import { StyleAdjuster } from "@/components/StyleAdjuster";
 import { ThinkingIndicator } from "@/components/ThinkingIndicator";
-import { getCurrencySymbol } from "@/components/CurrencySelector";
+import { getCurrencySymbol, CURRENCY_CONFIG } from "@/components/CurrencySelector";
 import { CelebrityPicks } from "@/components/CelebrityPicks";
 import { useSavedOutfits } from "@/hooks/useSavedOutfits";
 import { streamChat, Msg } from "@/lib/streamChat";
@@ -68,10 +68,33 @@ export default function Index() {
   const [hasStarted, setHasStarted] = useState(false);
 
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [budget, setBudget] = useState("$200–$500");
+  const [budget, setBudget] = useState<[number, number]>(CURRENCY_CONFIG["HKD"].outfitDefaults);
+  const [budgetMode, setBudgetMode] = useState<"total" | "per-item">("total");
+  const [itemBudgets, setItemBudgets] = useState<Record<string, [number, number]>>(CURRENCY_CONFIG["HKD"].itemDefaults);
   const [tone, setTone] = useState(3);
   const [gender, setGender] = useState<"women" | "men" | "unisex">("women");
   const [currency, setCurrency] = useState("HKD");
+
+  const handleCurrencyChange = useCallback((newCurrency: string) => {
+    const config = CURRENCY_CONFIG[newCurrency] ?? CURRENCY_CONFIG["USD"];
+    setCurrency(newCurrency);
+    setBudget(config.outfitDefaults);
+    setItemBudgets(config.itemDefaults);
+  }, []);
+
+  const getBudgetText = useCallback(() => {
+    const sym = getCurrencySymbol(currency);
+    if (budgetMode === "total") {
+      return `STRICT BUDGET: Total outfit cost must be between ${sym}${budget[0].toLocaleString()} and ${sym}${budget[1].toLocaleString()} in ${currency}. Price each item so all items together stay within this limit. Choose brands appropriate for this budget.`;
+    }
+    return `PER-ITEM BUDGET CONSTRAINTS (in ${currency}):
+- Top / Dress: ${sym}${itemBudgets.top[0].toLocaleString()}–${sym}${itemBudgets.top[1].toLocaleString()} per piece
+- Bottom: ${sym}${itemBudgets.bottom[0].toLocaleString()}–${sym}${itemBudgets.bottom[1].toLocaleString()} per piece
+- Shoes: ${sym}${itemBudgets.shoes[0].toLocaleString()}–${sym}${itemBudgets.shoes[1].toLocaleString()} per piece
+- Bag: ${sym}${itemBudgets.bag[0].toLocaleString()}–${sym}${itemBudgets.bag[1].toLocaleString()} per piece
+- Accessories: ${sym}${itemBudgets.accessories[0].toLocaleString()}–${sym}${itemBudgets.accessories[1].toLocaleString()} per piece
+Price each item within its category budget range. Choose brands appropriate for these price points.`;
+  }, [budget, budgetMode, itemBudgets, currency]);
   const [outfitsGenerated, setOutfitsGenerated] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [feedbackMap, setFeedbackMap] = useState<Record<string, OutfitFeedbackData>>({});
@@ -97,7 +120,10 @@ export default function Index() {
   const { savedOutfits, saveOutfit, removeOutfit, isOutfitSaved } = useSavedOutfits();
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const isNearBottom = window.innerHeight + window.scrollY >= document.body.scrollHeight - 300;
+    if (isNearBottom) {
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [chatEntries, isLoading]);
 
   const handleFileSelect = useCallback((file: File) => {
@@ -132,7 +158,7 @@ export default function Index() {
       {
         id: crypto.randomUUID(),
         role: "user",
-        content: `Steal ${celebrity}'s ${style.toLowerCase()} look — budget ${budget}, ${gender}'s fashion in ${currency}`,
+        content: `Steal ${celebrity}'s ${style.toLowerCase()} look — budget ${getCurrencySymbol(currency)}${budget[0]}–${getCurrencySymbol(currency)}${budget[1]}, ${gender}'s fashion in ${currency}`,
       },
     ]);
 
@@ -142,15 +168,19 @@ export default function Index() {
 
 Recreate ${celebrity}'s ${style.toLowerCase()} style. Briefly describe their signature look (2-3 sentences), then generate 3 outfits.
 
-Rules: Use color theory (complementary/analogous/tonal). Explain color choices in "explanation". Pair contrasting textures (matte+shine, structured+flowing). Match the celebrity's real accessory style. Use categories: top|bottom|shoes|bag|accessory|outerwear|dress|hat|scarf|belt|jewelry|sunglasses|watch. Reference 2025-2026 trends where fitting. Use specific colors ("Dusty Rose" not "Pink") and materials ("Brushed Cashmere" not "Cashmere"). Use REAL brands, realistic ${currency} prices. Budget: ${budget}/outfit. Gender: ${gender}.
+Rules: Use color theory (complementary/analogous/tonal). Explain color choices in "explanation". Pair contrasting textures (matte+shine, structured+flowing). Use specific colors ("Dusty Rose" not "Pink") and materials ("Brushed Cashmere" not "Cashmere"). Gender: ${gender}.
+
+${getBudgetText()}
+
+ITEMS PER OUTFIT: Include exactly 4 core items: 1 top (or dress), 1 bottom (skip if dress), 1 shoes, 1 bag. Only add a jacket/outerwear if it is the signature/accent piece of the look or the occasion is cold weather. Only add accessories (jewelry, hat, belt, sunglasses, etc.) if they are a defining statement piece of the outfit — not as filler. Keep items minimal and intentional. Use categories: top|bottom|shoes|bag|outerwear|dress|accessory|hat|belt|jewelry|sunglasses.
 
 Return: 1) Brief style analysis 2) JSON block:
 \`\`\`json
 [{"id":"id","name":"Name","explanation":"Why colors/textures work","stylingTips":["tip1","tip2"],"occasion":"${celebrity} inspired — ${style}","items":[{"name":"Item","brand":"Brand","price":89,"currency":"${currencySymbol}","color":"Specific Color","material":"Specific Material","category":"category","sizes":["XS","S","M","L","XL"],"shopUrl":"https://...","imageDescription":"desc"}]}]
 \`\`\`
-After showing outfits, ask if they want changes.`;
+After showing outfits, ask if they want changes. Do NOT use markdown tables — use plain prose or short bullet points only.`;
 
-    const userMessage = `Recreate ${celebrity}'s latest ${style.toLowerCase()} style. Create 3 outfit options. Budget: ${budget} per outfit. Gender: ${gender}. Currency: ${currency}.`;
+    const userMessage = `Recreate ${celebrity}'s latest ${style.toLowerCase()} style. Create 3 outfit options. Gender: ${gender}. Currency: ${currency}.`;
 
     const messages: Msg[] = [
       { role: "system", content: systemPrompt },
@@ -218,7 +248,7 @@ After showing outfits, ask if they want changes.`;
       {
         id: crypto.randomUUID(),
         role: "user",
-        content: `Remake this look — ${toneDesc}, budget ${budget}, ${gender}'s fashion in ${currency}`,
+        content: `Remake this look — ${toneDesc}, budget ${getCurrencySymbol(currency)}${budget[0]}–${getCurrencySymbol(currency)}${budget[1]}, ${gender}'s fashion in ${currency}`,
         imagePreview: uploadedImage,
       },
     ]);
@@ -229,18 +259,22 @@ After showing outfits, ask if they want changes.`;
 
 Analyze the uploaded photo: describe outfit pieces, color palette (specific names), textures, silhouette, and ALL accessories (count them). Then generate 3 outfit recreations.
 
-Rules: Match the image's color harmony (complementary/analogous/monochromatic). Explain color choices in "explanation". Recreate texture contrasts. Include a matching item for EVERY accessory visible. Use categories: top|bottom|shoes|bag|accessory|outerwear|dress|hat|scarf|belt|jewelry|sunglasses|watch. Use specific colors ("Dusty Rose" not "Pink") and materials ("Washed Linen" not "Linen"). Reference 2025-2026 trends where fitting.
+Rules: Match the image's color harmony (complementary/analogous/monochromatic). Explain color choices in "explanation". Recreate texture contrasts. Use specific colors ("Dusty Rose" not "Pink") and materials ("Washed Linen" not "Linen"). Reference 2025-2026 trends where fitting.
 
-Gender: ${gender}. Budget: ${budget}/outfit. Style tone: ${toneDesc} (1=casual, 3=similar, 5=glam). Currency: ${currency} (${currencySymbol}).
+ITEMS PER OUTFIT: Include exactly 4 core items: 1 top (or dress), 1 bottom (skip if dress), 1 shoes, 1 bag. Only add a jacket/outerwear if it is a key visible layer in the photo or the look is clearly cold-weather. Only add accessories (jewelry, hat, belt, sunglasses, etc.) if they are a statement/defining piece prominent in the photo — not as filler. Keep items minimal and intentional. Use categories: top|bottom|shoes|bag|outerwear|dress|accessory|hat|belt|jewelry|sunglasses.
+
+Gender: ${gender}. Style tone: ${toneDesc} (1=casual, 3=similar, 5=glam). Currency: ${currency} (${currencySymbol}).
 Tone 1-2: use Zara/H&M/ASOS. Tone 3: match closely. Tone 4-5: premium brands.
+
+${getBudgetText()}
 
 Return: 1) Brief look analysis 2) JSON:
 \`\`\`json
 [{"id":"id","name":"Name","explanation":"Color+texture reasoning","stylingTips":["tip1","tip2"],"occasion":"Inspired look","items":[{"name":"Item","brand":"Brand","price":89,"currency":"${currencySymbol}","color":"Specific Color","material":"Specific Material","category":"category","sizes":["XS","S","M","L","XL"],"shopUrl":"https://...","imageDescription":"desc"}]}]
 \`\`\`
-Use REAL brands, realistic ${currency} prices. After showing outfits, ask if they want changes.`;
+Use REAL brands, realistic ${currency} prices. After showing outfits, ask if they want changes. Do NOT use markdown tables — use plain prose or short bullet points only.`;
 
-    const userMessage = `Please analyze this look and create 3 outfit recreations. Style tone: ${toneDesc}. Budget: ${budget} per outfit. Gender: ${gender}. Currency: ${currency}.`;
+    const userMessage = `Please analyze this look and create 3 outfit recreations. Style tone: ${toneDesc}. Gender: ${gender}. Currency: ${currency}.`;
 
     const messages: Msg[] = [
       { role: "system", content: systemPrompt },
@@ -316,20 +350,21 @@ Use REAL brands, realistic ${currency} prices. After showing outfits, ask if the
 If they ask for different outfits or modifications, generate new outfit JSON blocks in the same format.
 If they ask general styling questions, answer conversationally without JSON.
 Always end by asking if they'd like to adjust anything.
+Do NOT use markdown tables. Use plain prose or short bullet points only.
 
 IMPORTANT — maintain consistency:
 - Keep the same color coordination principles (complementary, analogous, tonal) from the original outfits unless the user asks to change colors.
 - Maintain texture contrast and pairing quality.
-- Include the same level of accessory completeness — if original outfits had specific jewelry, hats, scarves etc., keep including them.
 - Use specific color names and material descriptions.
 ${feedbackContext}
 Rules:
 - Gender: ${gender}
-- Budget: ${budget}
+${getBudgetText()}
 - Currency: ${currency} (${currencySymbol})
-- Use REAL brands and realistic prices
+- Use REAL brands with prices realistic for this budget
 - Format outfits in \`\`\`json blocks
-- Valid categories: top, bottom, shoes, bag, accessory, outerwear, dress, hat, scarf, belt, jewelry, sunglasses, watch`;
+- ITEMS PER OUTFIT: 4 core items only — 1 top (or dress), 1 bottom (skip if dress), 1 shoes, 1 bag. Only add jacket/outerwear if it's a key accent piece or cold-weather look. Only add accessories if they're a statement piece, not filler.
+- Valid categories: top, bottom, shoes, bag, outerwear, dress, accessory, hat, belt, jewelry, sunglasses`;
 
     const messages: Msg[] = [
       { role: "system", content: systemPrompt },
@@ -388,7 +423,15 @@ Rules:
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar savedCount={savedOutfits.length} />
+      <Navbar savedCount={savedOutfits.length} onLogoClick={() => {
+          setHasStarted(false);
+          setChatEntries([]);
+          setConversationHistory([]);
+          setUploadedImage(null);
+          setOutfitsGenerated(false);
+          setIsLoading(false);
+          setInput("");
+        }} />
 
       <AnimatePresence mode="wait">
         {!hasStarted ? (
@@ -589,12 +632,16 @@ Rules:
                         <StyleAdjuster
                           budget={budget}
                           onBudgetChange={setBudget}
+                          budgetMode={budgetMode}
+                          onBudgetModeChange={setBudgetMode}
+                          itemBudgets={itemBudgets}
+                          onItemBudgetChange={(cat, v) => setItemBudgets((prev) => ({ ...prev, [cat]: v }))}
                           tone={tone}
                           onToneChange={setTone}
                           gender={gender}
                           onGenderChange={setGender}
                           currency={currency}
-                          onCurrencyChange={setCurrency}
+                          onCurrencyChange={handleCurrencyChange}
                           onSubmit={handleFindMyLook}
                           isLoading={isLoading}
                         />
@@ -653,9 +700,45 @@ Rules:
                   ) : (
                     <div className="space-y-4 max-w-full">
                       {entry.content && (
-                        <div className="prose prose-sm max-w-none text-foreground font-sans">
-                          <ReactMarkdown>{entry.content}</ReactMarkdown>
-                        </div>
+                        entry.outfits && entry.outfits.length > 0 ? (
+                          <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-2">
+                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-border">
+                              <div className="w-1.5 h-4 rounded-full bg-accent/70" />
+                              <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground font-sans">Style Analysis</span>
+                            </div>
+                            <ReactMarkdown
+                              components={{
+                                p: ({ children }) => <p className="text-sm text-foreground/85 font-sans leading-relaxed mb-2 last:mb-0">{children}</p>,
+                                strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
+                                em: ({ children }) => <em className="italic text-foreground/70">{children}</em>,
+                                h3: ({ children }) => <h3 className="text-xs font-semibold text-foreground font-sans uppercase tracking-wider mt-3 mb-1 text-muted-foreground">{children}</h3>,
+                                ul: ({ children }) => <ul className="space-y-1 my-1">{children}</ul>,
+                                li: ({ children }) => <li className="text-sm text-foreground/80 font-sans flex gap-2"><span className="text-accent flex-shrink-0">—</span><span>{children}</span></li>,
+                                table: ({ children }) => <div className="space-y-1">{children}</div>,
+                                thead: () => null,
+                                tbody: ({ children }) => <div className="space-y-1">{children}</div>,
+                                tr: ({ children }) => <div className="text-sm text-foreground/80 font-sans">{children}</div>,
+                                td: ({ children }) => <span className="mr-3">{children}</span>,
+                              }}
+                            >
+                              {entry.content}
+                            </ReactMarkdown>
+                          </div>
+                        ) : (
+                          <div className="max-w-none space-y-2">
+                            <ReactMarkdown
+                              components={{
+                                p: ({ children }) => <p className="text-sm text-foreground/85 font-sans leading-relaxed">{children}</p>,
+                                strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
+                                em: ({ children }) => <em className="italic text-foreground/70">{children}</em>,
+                                ul: ({ children }) => <ul className="space-y-1 my-1">{children}</ul>,
+                                li: ({ children }) => <li className="text-sm text-foreground/80 font-sans flex gap-2"><span className="text-accent flex-shrink-0">—</span><span>{children}</span></li>,
+                              }}
+                            >
+                              {entry.content}
+                            </ReactMarkdown>
+                          </div>
+                        )
                       )}
                       {entry.outfits && entry.outfits.length > 0 && (
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
@@ -693,24 +776,43 @@ Rules:
           animate={{ opacity: 1, y: 0 }}
           className="fixed bottom-0 left-0 right-0 bg-background/90 backdrop-blur-md border-t border-border py-3 px-4 z-40"
         >
-          <div className="max-w-3xl mx-auto relative">
-            <input
-              ref={followUpInputRef}
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleChatFollowUp(input)}
-              placeholder={outfitsGenerated ? "Make it more casual, swap the shoes, try different brands..." : "Type a message..."}
-              disabled={isLoading}
-              className="w-full px-5 py-3 pr-12 rounded-full border border-border bg-card text-foreground placeholder:text-muted-foreground text-sm font-sans focus:outline-none focus:ring-2 focus:ring-foreground/20 transition-all disabled:opacity-50"
-            />
-            <button
-              onClick={() => handleChatFollowUp(input)}
-              disabled={!input.trim() || isLoading}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-foreground text-background hover:bg-foreground/80 transition-colors disabled:opacity-30"
-            >
-              <Send className="w-4 h-4" />
-            </button>
+          <div className="max-w-3xl mx-auto space-y-2">
+            {outfitsGenerated && !isLoading && (
+              <div className="flex gap-2 flex-wrap">
+                {[
+                  "Make it more casual",
+                  "Try a different color palette",
+                  "More affordable options",
+                ].map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    onClick={() => handleChatFollowUp(suggestion)}
+                    className="text-xs px-3 py-1.5 rounded-full border border-border bg-card text-muted-foreground hover:text-foreground hover:border-foreground/40 font-sans transition-all"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="relative">
+              <input
+                ref={followUpInputRef}
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleChatFollowUp(input)}
+                placeholder={outfitsGenerated ? "Make it more casual, swap the shoes, try different brands..." : "Type a message..."}
+                disabled={isLoading}
+                className="w-full px-5 py-3 pr-12 rounded-full border border-border bg-card text-foreground placeholder:text-muted-foreground text-sm font-sans focus:outline-none focus:ring-2 focus:ring-foreground/20 transition-all disabled:opacity-50"
+              />
+              <button
+                onClick={() => handleChatFollowUp(input)}
+                disabled={!input.trim() || isLoading}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-foreground text-background hover:bg-foreground/80 transition-colors disabled:opacity-30"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </motion.div>
       )}

@@ -1,8 +1,14 @@
 import { Slider } from "@/components/ui/slider";
-import { CurrencySelector } from "@/components/CurrencySelector";
-import { motion } from "framer-motion";
+import { CurrencySelector, getCurrencySymbol, CURRENCY_CONFIG } from "@/components/CurrencySelector";
 
-const BUDGET_OPTIONS = ["Under $200", "$200–$500", "$500–$1,000", "$1,000+"];
+const ITEM_CATEGORIES = [
+  { key: "top", label: "Top / Dress" },
+  { key: "bottom", label: "Bottom" },
+  { key: "shoes", label: "Shoes" },
+  { key: "bag", label: "Bag" },
+  { key: "accessories", label: "Accessories" },
+];
+import { motion } from "framer-motion";
 
 const TONE_LABELS: Record<number, string> = {
   1: "Way More Casual",
@@ -13,8 +19,12 @@ const TONE_LABELS: Record<number, string> = {
 };
 
 interface StyleAdjusterProps {
-  budget: string;
-  onBudgetChange: (v: string) => void;
+  budget: [number, number];
+  onBudgetChange: (v: [number, number]) => void;
+  budgetMode: "total" | "per-item";
+  onBudgetModeChange: (v: "total" | "per-item") => void;
+  itemBudgets: Record<string, [number, number]>;
+  onItemBudgetChange: (category: string, v: [number, number]) => void;
   tone: number;
   onToneChange: (v: number) => void;
   gender: "women" | "men" | "unisex";
@@ -28,6 +38,10 @@ interface StyleAdjusterProps {
 export function StyleAdjuster({
   budget,
   onBudgetChange,
+  budgetMode,
+  onBudgetModeChange,
+  itemBudgets,
+  onItemBudgetChange,
   tone,
   onToneChange,
   gender,
@@ -37,6 +51,8 @@ export function StyleAdjuster({
   onSubmit,
   isLoading,
 }: StyleAdjusterProps) {
+  const config = CURRENCY_CONFIG[currency] ?? CURRENCY_CONFIG["USD"];
+  const sym = getCurrencySymbol(currency);
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -86,25 +102,85 @@ export function StyleAdjuster({
 
       {/* Budget */}
       <div>
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-center gap-2 mb-3 flex-wrap">
           <p className="text-xs font-semibold text-foreground font-sans uppercase tracking-wider">Budget</p>
           <CurrencySelector value={currency} onChange={onCurrencyChange} />
+          <div className="ml-auto inline-flex rounded-full border border-border bg-card p-0.5">
+            {(["total", "per-item"] as const).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => onBudgetModeChange(mode)}
+                className={`text-[10px] px-2.5 py-1 rounded-full font-sans transition-all ${
+                  budgetMode === mode
+                    ? "bg-foreground text-background"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {mode === "total" ? "Outfit" : "Per Item"}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {BUDGET_OPTIONS.map((opt) => (
-            <button
-              key={opt}
-              onClick={() => onBudgetChange(opt)}
-              className={`text-sm px-4 py-2 rounded-full border transition-all font-sans ${
-                budget === opt
-                  ? "bg-foreground text-background border-foreground"
-                  : "border-border text-foreground hover:bg-secondary"
-              }`}
-            >
-              {opt}
-            </button>
-          ))}
-        </div>
+        {budgetMode === "total" ? (
+          <>
+            <div className="flex gap-1.5 mb-3 flex-wrap">
+              {([
+                { key: "affordable", label: "Affordable" },
+                { key: "midrange",   label: "Mid-range" },
+                { key: "highend",    label: "High End" },
+                { key: "luxury",     label: "Luxury" },
+              ] as const).map(({ key, label }) => {
+                const p = config.presets[key];
+                const active = budget[0] === p[0] && budget[1] === p[1];
+                return (
+                  <button
+                    key={key}
+                    onClick={() => onBudgetChange(p)}
+                    className={`text-[10px] px-2.5 py-1 rounded-full border font-sans transition-all ${
+                      active
+                        ? "bg-foreground text-background border-foreground"
+                        : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/40"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-muted-foreground font-sans">
+                {sym}{budget[0].toLocaleString()} – {sym}{budget[1].toLocaleString()}
+              </span>
+            </div>
+            <Slider
+              value={budget}
+              onValueChange={(v) => onBudgetChange(v as [number, number])}
+              min={0}
+              max={config.max}
+              step={config.step}
+            />
+          </>
+        ) : (
+          <div className="space-y-3">
+            {ITEM_CATEGORIES.map(({ key, label }) => (
+              <div key={key}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[11px] font-medium text-foreground font-sans">{label}</span>
+                  <span className="text-[11px] text-muted-foreground font-sans">
+                    {sym}{itemBudgets[key][0].toLocaleString()} – {sym}{itemBudgets[key][1].toLocaleString()}
+                  </span>
+                </div>
+                <Slider
+                  value={itemBudgets[key]}
+                  onValueChange={(v) => onItemBudgetChange(key, v as [number, number])}
+                  min={0}
+                  max={Math.round(config.max / 2)}
+                  step={config.step}
+                />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Submit */}

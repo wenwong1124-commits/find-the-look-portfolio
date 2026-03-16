@@ -1,5 +1,5 @@
 import { CapsuleOutfit, OutfitItem } from "@/types/outfit";
-import { Heart, ExternalLink, Sparkles } from "lucide-react";
+import { Heart, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useItemImage } from "@/hooks/useItemImage";
@@ -15,26 +15,37 @@ interface OutfitCardProps {
   onFeedback?: (data: OutfitFeedbackData) => void;
 }
 
+const CATEGORY_LABELS: Record<string, string> = {
+  top: "Top", bottom: "Bottom", shoes: "Shoes", bag: "Bag",
+  outerwear: "Outerwear", dress: "Dress", accessory: "Accessory",
+  hat: "Hat", scarf: "Scarf", belt: "Belt", jewelry: "Jewelry",
+  sunglasses: "Sunglasses", watch: "Watch",
+};
+
 const categoryBgColors = [
-  "bg-secondary/60",
-  "bg-muted/60",
-  "bg-secondary/40",
-  "bg-muted/40",
-  "bg-secondary/50",
-  "bg-muted/50",
+  "bg-secondary/60", "bg-muted/60", "bg-secondary/40",
+  "bg-muted/40", "bg-secondary/50", "bg-muted/50",
 ];
 
 function ItemImage({ item, index }: { item: OutfitItem; index: number }) {
-  const { imageUrl, isLoading, emoji } = useItemImage(item.name, item.brand, item.category, item.color, item.material);
+  const { imageUrl, isLoading, emoji } = useItemImage(item.name, item.brand, item.category, item.color, item.material, item.shopUrl);
 
   return (
     <div className={cn(
       "w-16 h-16 rounded-lg flex items-center justify-center text-xl flex-shrink-0 relative overflow-hidden",
       categoryBgColors[index % categoryBgColors.length]
     )}>
-      <span className={cn("transition-opacity duration-300", imageUrl ? "opacity-0" : "opacity-100")}>
-        {emoji}
-      </span>
+      {isLoading ? (
+        <motion.div
+          className="w-5 h-5 rounded-full border-2 border-muted-foreground/20 border-t-foreground/50"
+          animate={{ rotate: 360 }}
+          transition={{ duration: 0.9, repeat: Infinity, ease: "linear" }}
+        />
+      ) : (
+        <span className={cn("transition-opacity duration-300", imageUrl ? "opacity-0" : "opacity-100")}>
+          {emoji}
+        </span>
+      )}
       {imageUrl && (
         <motion.img
           initial={{ opacity: 0 }}
@@ -50,6 +61,9 @@ function ItemImage({ item, index }: { item: OutfitItem; index: number }) {
 }
 
 export function OutfitCard({ outfit, isSaved, onToggleSave, index, feedback, onFeedback }: OutfitCardProps) {
+  const total = outfit.items.reduce((sum, item) => sum + (item.price || 0), 0);
+  const currencySymbol = outfit.items[0]?.currency ?? "";
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
@@ -59,13 +73,14 @@ export function OutfitCard({ outfit, isSaved, onToggleSave, index, feedback, onF
     >
       <ScrapbookOutfitView items={outfit.items} outfitName={outfit.name} />
 
+      {/* Header */}
       <div className="flex items-start justify-between px-4 py-3 border-b border-border">
         <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-semibold text-foreground font-sans truncate">
+          <h3 className="text-sm font-semibold text-foreground font-serif leading-snug">
             {outfit.name}
           </h3>
           {outfit.occasion && (
-            <span className="text-[11px] text-muted-foreground font-sans block truncate">
+            <span className="text-[11px] text-muted-foreground font-sans block mt-0.5">
               {outfit.occasion}
             </span>
           )}
@@ -75,59 +90,65 @@ export function OutfitCard({ outfit, isSaved, onToggleSave, index, feedback, onF
           className="p-1.5 rounded-full hover:bg-secondary transition-colors flex-shrink-0 ml-2"
           aria-label={isSaved ? "Remove from saved" : "Save outfit"}
         >
-          <Heart
-            className={cn("w-4 h-4 transition-colors", isSaved ? "fill-warm text-warm" : "text-muted-foreground")}
-          />
+          <Heart className={cn("w-4 h-4 transition-colors", isSaved ? "fill-warm text-warm" : "text-muted-foreground")} />
         </button>
       </div>
 
-      {(outfit.explanation || (outfit.stylingTips && outfit.stylingTips.length > 0)) && (
-        <div className="px-4 py-3 border-b border-border space-y-2">
-          {outfit.explanation && (
-            <p className="text-xs text-muted-foreground font-sans leading-relaxed">
-              {outfit.explanation}
-            </p>
-          )}
-          {outfit.stylingTips && outfit.stylingTips.length > 0 && (
-            <div className="space-y-1">
-              <div className="flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-accent" />
-                <span className="text-[10px] font-semibold text-foreground font-sans uppercase tracking-wider">Styling Tips</span>
-              </div>
-              <ul className="space-y-0.5">
-                {outfit.stylingTips.map((tip, i) => (
-                  <li key={i} className="text-[11px] text-muted-foreground font-sans leading-snug pl-3 relative before:content-['•'] before:absolute before:left-0 before:text-accent">
-                    {tip}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+      {/* Explanation */}
+      {outfit.explanation && (
+        <div className="px-4 py-3 border-b border-border">
+          <p className="text-sm text-foreground/80 font-serif italic leading-relaxed border-l-2 border-accent/50 pl-3">
+            {outfit.explanation}
+          </p>
         </div>
       )}
 
-      <div className="divide-y divide-border">
+      {/* Styling Tips */}
+      {outfit.stylingTips && outfit.stylingTips.length > 0 && (
+        <div className="px-4 py-3 border-b border-border bg-muted/20">
+          <div className="flex items-center gap-1.5 mb-2">
+            <Sparkles className="w-3 h-3 text-accent" />
+            <span className="text-[10px] font-semibold text-foreground font-sans uppercase tracking-wider">Styling Tips</span>
+          </div>
+          <ul className="space-y-1.5">
+            {outfit.stylingTips.map((tip, i) => (
+              <li key={i} className="flex gap-2 text-xs text-muted-foreground font-sans leading-snug">
+                <span className="text-accent font-semibold flex-shrink-0">{i + 1}.</span>
+                <span>{tip}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Item list */}
+      <div className="divide-y divide-border flex-1">
         {outfit.items.map((item, i) => (
           <div key={i} className="flex items-center gap-3 px-4 py-3">
             <ItemImage item={item} index={i} />
             <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <span className="text-[10px] font-medium text-muted-foreground font-sans bg-muted px-1.5 py-0.5 rounded-full uppercase tracking-wide">
+                  {CATEGORY_LABELS[item.category] ?? item.category}
+                </span>
+              </div>
               <p className="text-xs font-semibold text-foreground font-sans truncate">{item.brand}</p>
               <p className="text-[11px] text-muted-foreground font-sans truncate">{item.name}</p>
-              <p className="text-[11px] font-semibold text-accent font-sans mt-0.5">
-                {item.currency}{item.price}
-              </p>
+              {item.color && (
+                <p className="text-[10px] text-muted-foreground/70 font-sans truncate mt-0.5">{item.color} · {item.material}</p>
+              )}
             </div>
-            <a
-              href={item.shopUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-1 rounded-full hover:bg-secondary transition-colors flex-shrink-0"
-              aria-label={`Shop ${item.name}`}
-            >
-              <ExternalLink className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground" />
-            </a>
+            <p className="text-xs font-semibold text-foreground font-sans flex-shrink-0">
+              {item.currency}{item.price?.toLocaleString()}
+            </p>
           </div>
         ))}
+      </div>
+
+      {/* Total */}
+      <div className="flex items-center justify-between px-4 py-2.5 border-t border-border bg-muted/20">
+        <span className="text-[11px] text-muted-foreground font-sans uppercase tracking-wider">Total</span>
+        <span className="text-sm font-semibold text-foreground font-sans">{currencySymbol}{total.toLocaleString()}</span>
       </div>
 
       {onFeedback && (

@@ -4,15 +4,16 @@ import { cn } from "@/lib/utils";
 
 interface NavbarProps {
   savedCount: number;
+  onLogoClick?: () => void;
 }
 
-export function Navbar({ savedCount }: NavbarProps) {
+export function Navbar({ savedCount, onLogoClick }: NavbarProps) {
   const location = useLocation();
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
       <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
-        <Link to="/" className="flex items-baseline gap-1.5 text-foreground" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
+        <Link to="/" onClick={onLogoClick} className="flex items-baseline gap-1.5 text-foreground" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
           <span className="text-lg tracking-[0.3em] font-light uppercase">STYLE</span>
           <span className="font-handwritten text-xl" style={{ transform: "rotate(-2deg)" }}>capsule</span>
         </Link>

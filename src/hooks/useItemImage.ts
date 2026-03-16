@@ -1,14 +1,14 @@
 import { useState, useEffect, useRef } from "react";
 
-const IMAGE_CACHE_KEY = "stylecapsule_image_cache_v3";
-const BATCH_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/search-product-images`;
+const IMAGE_CACHE_KEY = "stylecapsule_image_cache_v4";
+const BATCH_URL = `${import.meta.env.VITE_CRAWLER_URL}/search-products`;
 const BATCH_DEBOUNCE_MS = 150;
 
 // In-memory cache
 const memoryCache: Record<string, string> = {};
 
 // Only search images for core clothing — accessories use emojis
-const IMAGE_WORTHY_CATEGORIES = new Set(["top", "bottom", "shoes", "outerwear", "dress"]);
+const IMAGE_WORTHY_CATEGORIES = new Set(["top", "bottom", "shoes", "bag", "outerwear", "dress", "accessory", "jewelry", "hat", "belt", "sunglasses", "scarf"]);
 
 const categoryEmojis: Record<string, string> = {
   top: "👕", bottom: "👖", shoes: "👢", bag: "👜", accessory: "💍",
@@ -21,7 +21,7 @@ export function getItemEmoji(category: string): string {
 }
 
 // ── Batch collector ──
-type PendingItem = { key: string; query: string; resolve: (url: string | null) => void };
+type PendingItem = { key: string; query: string; shopUrl?: string; resolve: (url: string | null) => void };
 let pendingBatch: PendingItem[] = [];
 let batchTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -56,20 +56,18 @@ async function flushBatch() {
   try {
     const res = await fetch(BATCH_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        queries: batch.map((b) => ({ key: b.key, query: b.query })),
+        queries: batch.map((b) => ({ key: b.key, query: b.query, shopUrl: b.shopUrl })),
       }),
     });
     const data = await res.json();
-    const results: Record<string, string> = data.results || {};
+    const results: Record<string, { imageUrl?: string } | string> = data.results || {};
 
     const toCache: Record<string, string> = {};
     for (const item of batch) {
-      const url = results[item.key] || null;
+      const raw = results[item.key];
+      const url = (typeof raw === "string" ? raw : raw?.imageUrl) || null;
       if (url) {
         memoryCache[item.key] = url;
         toCache[item.key] = url;
@@ -82,9 +80,9 @@ async function flushBatch() {
   }
 }
 
-function enqueueBatch(key: string, query: string): Promise<string | null> {
+function enqueueBatch(key: string, query: string, shopUrl?: string): Promise<string | null> {
   return new Promise((resolve) => {
-    pendingBatch.push({ key, query, resolve });
+    pendingBatch.push({ key, query, shopUrl, resolve });
     if (batchTimer) clearTimeout(batchTimer);
     batchTimer = setTimeout(flushBatch, BATCH_DEBOUNCE_MS);
   });
@@ -96,6 +94,7 @@ export function useItemImage(
   category: string,
   color?: string,
   material?: string,
+  shopUrl?: string,
 ) {
   const cacheKey = `${brand}-${itemDescription}-${category}-${color || ""}-${material || ""}`
     .toLowerCase()
@@ -134,7 +133,7 @@ export function useItemImage(
     if (material) parts.push(material);
     const query = parts.join(" ");
 
-    enqueueBatch(cacheKey, query).then((url) => {
+    enqueueBatch(cacheKey, query, shopUrl).then((url) => {
       if (url) setImageUrl(url);
       setIsLoading(false);
     });
