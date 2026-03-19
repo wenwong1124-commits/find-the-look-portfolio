@@ -137,6 +137,17 @@ app.post("/api/search-products", async (req, res) => {
   res.json({ results });
 });
 
+// ── Health check ──────────────────────────────────────────────────────────────
+
+app.get("/api/health", (req, res) => {
+  res.json({
+    status: "ok",
+    anthropic: !!process.env.ANTHROPIC_API_KEY,
+    gemini: !!process.env.GEMINI_API_KEY,
+    node: process.version,
+  });
+});
+
 // ── Route ─────────────────────────────────────────────────────────────────────
 
 app.post("/api/style-advisor", async (req, res) => {
