@@ -1,4 +1,4 @@
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/style-advisor`;
+const CHAT_URL = `/api/style-advisor`;
 
 export type Msg = { role: "user" | "assistant" | "system"; content: string | Array<{ type: string; text?: string; image_url?: { url: string } }> };
 
@@ -21,7 +21,6 @@ export async function streamChat({
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
       },
       body: JSON.stringify({ messages, imageUrl }),
     });
@@ -40,7 +39,10 @@ export async function streamChat({
   if (resp.status === 402) {
     throw new Error("Usage limit reached. Please add credits.");
   }
-  if (!resp.ok || !resp.body) throw new Error("Failed to start stream");
+  if (!resp.ok || !resp.body) {
+    const body = await resp.text().catch(() => "");
+    throw new Error(`Stream failed (HTTP ${resp.status}): ${body.slice(0, 200)}`);
+  }
 
   const reader = resp.body.getReader();
   const decoder = new TextDecoder();

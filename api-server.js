@@ -148,6 +148,19 @@ app.get("/api/health", (req, res) => {
   });
 });
 
+app.get("/api/test-claude", async (req, res) => {
+  try {
+    const msg = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 16,
+      messages: [{ role: "user", content: "Say hi" }],
+    });
+    res.json({ ok: true, reply: msg.content[0]?.text });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // ── Route ─────────────────────────────────────────────────────────────────────
 
 app.post("/api/style-advisor", async (req, res) => {
