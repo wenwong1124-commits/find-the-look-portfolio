@@ -176,7 +176,7 @@ ITEMS PER OUTFIT: Include exactly 4 core items: 1 top (or dress), 1 bottom (skip
 
 Return: 1) Brief style analysis 2) JSON block:
 \`\`\`json
-[{"id":"id","name":"Name","explanation":"Why colors/textures work","stylingTips":["tip1","tip2"],"occasion":"${celebrity} inspired — ${style}","items":[{"name":"Item","brand":"Brand","price":89,"currency":"${currencySymbol}","color":"Specific Color","material":"Specific Material","category":"category","sizes":["XS","S","M","L","XL"],"shopUrl":"https://...","imageDescription":"desc"}]}]
+[{"id":"id","name":"Name","explanation":"Why colors/textures work","stylingTips":["tip1","tip2"],"occasion":"${celebrity} inspired — ${style}","items":[{"name":"Item","brand":"Brand","price":89,"currency":"${currencySymbol}","color":"Specific Color","material":"Specific Material","category":"category","shopUrl":"https://..."}]}]
 \`\`\`
 After showing outfits, ask if they want changes. Do NOT use markdown tables — use plain prose or short bullet points only.`;
 
@@ -270,7 +270,7 @@ ${getBudgetText()}
 
 Return: 1) Brief look analysis 2) JSON:
 \`\`\`json
-[{"id":"id","name":"Name","explanation":"Color+texture reasoning","stylingTips":["tip1","tip2"],"occasion":"Inspired look","items":[{"name":"Item","brand":"Brand","price":89,"currency":"${currencySymbol}","color":"Specific Color","material":"Specific Material","category":"category","sizes":["XS","S","M","L","XL"],"shopUrl":"https://...","imageDescription":"desc"}]}]
+[{"id":"id","name":"Name","explanation":"Color+texture reasoning","stylingTips":["tip1","tip2"],"occasion":"Inspired look","items":[{"name":"Item","brand":"Brand","price":89,"currency":"${currencySymbol}","color":"Specific Color","material":"Specific Material","category":"category","shopUrl":"https://..."}]}]
 \`\`\`
 Use REAL brands, realistic ${currency} prices. After showing outfits, ask if they want changes. Do NOT use markdown tables — use plain prose or short bullet points only.`;
 
