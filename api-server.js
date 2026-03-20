@@ -187,7 +187,7 @@ app.post("/api/style-advisor", async (req, res) => {
   try {
     const stream = client.messages.stream({
       model: "claude-sonnet-4-6",
-      max_tokens: 8192,
+      max_tokens: 4000,
       ...(system ? { system } : {}),
       messages: claudeMessages,
     });
@@ -231,6 +231,19 @@ if (existsSync(distPath)) {
 }
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () =>
-  console.log(`[api-server] Running on http://localhost:${PORT}`)
-);
+app.listen(PORT, () => {
+  console.log(`[api-server] Running on http://localhost:${PORT}`);
+
+  // Keep Render free tier warm — ping self every 14 minutes to prevent spin-down
+  if (process.env.RENDER_EXTERNAL_URL) {
+    const url = `${process.env.RENDER_EXTERNAL_URL}/api/health`;
+    setInterval(async () => {
+      try {
+        await fetch(url);
+        console.log("[keep-warm] pinged", url);
+      } catch (e) {
+        console.warn("[keep-warm] ping failed:", e.message);
+      }
+    }, 14 * 60 * 1000);
+  }
+});
